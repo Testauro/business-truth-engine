@@ -49,6 +49,8 @@ Reports land in `bte-report/` (git-ignored): CLI outputs, coverage, Playwright H
 
 ## Troubleshooting
 
+- `pnpm lint` reports hundreds of `no-unsafe-*` errors on `@bte/*` imports: the type-aware lint resolves
+  workspace packages through their built `dist/*.d.ts`. Run `pnpm build` first (`verify` does).
 - `pnpm: command not found`: use `npx --yes pnpm@10 ...` (pin the major; bare `npx pnpm` may fetch another).
 - `Executable doesn't exist ... chrome-headless-shell`: run the Playwright install command above.
 - Playwright tests all failing to connect: each worker starts its own demo on port 0; nothing to
