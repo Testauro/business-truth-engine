@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "test:demonstration": "playwright test --grep @demonstration",
+    "test:demonstration": "BTE_E2E_INCLUDE_DEMONSTRATION=1 playwright test --grep @demonstration",
     "report": "playwright show-report ../../bte-report/e2e-html"
   },
   "dependencies": {

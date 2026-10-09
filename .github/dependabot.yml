@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-tooling:
+        patterns: ['eslint*', 'typescript*', 'prettier', 'vitest', '@vitest/*', 'fast-check', 'tsx']
+      playwright:
+        patterns: ['@playwright/*', 'playwright*']
+      runtime:
+        patterns: ['fastify', '@fastify/*', 'zod', 'yaml', 'commander']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -266,3 +266,52 @@ describe('admin and evidence endpoints', () => {
     });
   });
 });
+
+describe('clock control', () => {
+  it('reports a controllable clock and advances it, issuing delayed invoices', async () => {
+    h = await startDemo(['delayed-invoice']);
+    await checkoutViaUi(h);
+    const before = await h.demo.app.inject({ method: 'GET', url: '/admin/clock' });
+    expect(before.json()).toEqual({ now: '2026-01-15T10:00:00.000Z', controllable: true });
+    const advanced = await h.demo.app.inject({
+      method: 'POST',
+      url: '/admin/clock/advance',
+      payload: { ms: 150_000 },
+    });
+    expect(advanced.json()).toEqual({
+      now: '2026-01-15T10:02:30.000Z',
+      advancedMs: 150_000,
+      invoicesIssued: 1,
+    });
+    const bad = await h.demo.app.inject({
+      method: 'POST',
+      url: '/admin/clock/advance',
+      payload: { ms: -1 },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
+  it('refuses to advance a system clock', async () => {
+    const { SystemClock } = await import('@bte/core');
+    const { buildDemo } = await import('../src/index.js');
+    const demo = buildDemo({ clock: new SystemClock() });
+    await demo.app.ready();
+    const response = await demo.app.inject({
+      method: 'POST',
+      url: '/admin/clock/advance',
+      payload: { ms: 1 },
+    });
+    expect(response.statusCode).toBe(409);
+    expect((await demo.app.inject({ method: 'GET', url: '/admin/clock' })).json()).toMatchObject({
+      controllable: false,
+    });
+    await demo.app.close();
+  });
+
+  it('the event bus keeps an ordered log of published events', async () => {
+    h = await startDemo();
+    await checkoutViaUi(h);
+    expect(h.demo.bus.log.map((e) => e.type)).toEqual(['order.paid']);
+    expect(h.demo.bus.now()).toBe('2026-01-15T10:00:00.000Z');
+  });
+});

@@ -60,7 +60,7 @@ describe('bte CLI', () => {
     ]);
     expect(code).toBe(0);
     const report = JSON.parse(out) as { schemaVersion: number; summary: Record<string, number> };
-    expect(report.schemaVersion).toBe(1);
+    expect(report.schemaVersion).toBe(2);
     expect(report.summary).toEqual({ PASS: 1, FAIL: 0, PENDING: 0, UNKNOWN: 0 });
     expect(await readFile(output, 'utf8')).toBe(out);
   });
@@ -71,7 +71,7 @@ describe('bte CLI', () => {
     expect(err).toContain('--now not given');
   });
 
-  it('rejects bad option values with exit code 1 and no stack trace', async () => {
+  it('rejects bad option values with exit code 2 and no stack trace', async () => {
     const { code, err } = await invoke([
       'evaluate',
       '-r',
@@ -81,7 +81,7 @@ describe('bte CLI', () => {
       '--now',
       'yesterday',
     ]);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(err).toContain('ISO-8601');
     const bad = await invoke([
       'evaluate',
@@ -92,7 +92,7 @@ describe('bte CLI', () => {
       '--fail-on',
       'always',
     ]);
-    expect(bad.code).toBe(1);
+    expect(bad.code).toBe(2);
     expect(bad.err).toContain('fail, unknown, pending');
   });
 

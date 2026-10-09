@@ -1,20 +1,36 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { EvidenceSet, FixedClock, SystemClock, evaluateRules, toIso } from '@bte/core';
-import type { Clock, Verdict } from '@bte/core';
+import type { Clock } from '@bte/core';
 import { readAllEvidence } from '@bte/evidence';
 import { loadRules } from '@bte/rules';
-import type { EvaluationReport } from './report.js';
-import { REPORT_SCHEMA_VERSION, renderJson, renderText, summarize } from './report.js';
+import type { EvaluationReport, FailOn } from './report.js';
+import {
+  EXIT_GATE_FAILED,
+  EXIT_OK,
+  GATE,
+  REPORT_SCHEMA_VERSION,
+  indexEvidence,
+  renderJson,
+  renderJunit,
+  renderMarkdown,
+  renderText,
+  summarize,
+} from './report.js';
 
-export type FailOn = 'fail' | 'unknown' | 'pending';
+export type OutputFormat = 'text' | 'json' | 'markdown';
 
 export interface EvaluateCommandOptions {
   rules: readonly string[];
   evidence: readonly string[];
   now?: string | undefined;
-  format: 'text' | 'json';
+  format: OutputFormat;
+  /** JSON report file. */
   output?: string | undefined;
+  /** JUnit XML report file. */
+  junit?: string | undefined;
+  /** Markdown report file (e.g. appended to $GITHUB_STEP_SUMMARY). */
+  markdown?: string | undefined;
   failOn: FailOn;
 }
 
@@ -22,16 +38,23 @@ export interface EvaluateCommandResult {
   report: EvaluationReport;
   rendered: string;
   exitCode: number;
+  /** Files written, in order. */
+  written: readonly string[];
 }
-
-const GATE: Readonly<Record<FailOn, readonly Verdict[]>> = {
-  fail: ['FAIL'],
-  unknown: ['FAIL', 'UNKNOWN'],
-  pending: ['FAIL', 'UNKNOWN', 'PENDING'],
-};
 
 export function makeClock(now: string | undefined): Clock {
   return now === undefined ? new SystemClock() : new FixedClock(now);
+}
+
+export function render(report: EvaluationReport, format: OutputFormat): string {
+  switch (format) {
+    case 'json':
+      return renderJson(report);
+    case 'markdown':
+      return renderMarkdown(report);
+    case 'text':
+      return renderText(report);
+  }
 }
 
 export async function runEvaluate(options: EvaluateCommandOptions): Promise<EvaluateCommandResult> {
@@ -41,6 +64,15 @@ export async function runEvaluate(options: EvaluateCommandOptions): Promise<Eval
   const evidence = EvidenceSet.from(records);
   const clock = makeClock(options.now);
   const verdicts = evaluateRules(rules, evidence, { clock });
+  const failingVerdicts = GATE[options.failOn];
+  const failed = verdicts
+    .filter((verdict) => failingVerdicts.includes(verdict.verdict))
+    .map((verdict) => ({
+      ruleId: verdict.ruleId,
+      correlationValue: verdict.correlationValue,
+      verdict: verdict.verdict,
+    }));
+  const exitCode = failed.length > 0 ? EXIT_GATE_FAILED : EXIT_OK;
   const report: EvaluationReport = {
     schemaVersion: REPORT_SCHEMA_VERSION,
     generator: 'bte-cli/0.1.0',
@@ -51,17 +83,25 @@ export async function runEvaluate(options: EvaluateCommandOptions): Promise<Eval
       eventCount: evidence.size,
       sourceCount: evidence.sources.length,
     },
+    gate: { failOn: options.failOn, failingVerdicts, failed },
+    exitCode,
     summary: summarize(verdicts),
     verdicts,
+    evidence: indexEvidence(verdicts, evidence),
   };
-  const rendered = options.format === 'json' ? renderJson(report) : renderText(report);
-  if (options.output !== undefined) {
-    await mkdir(path.dirname(options.output), { recursive: true });
-    await writeFile(options.output, renderJson(report), 'utf8');
+  const written: string[] = [];
+  const outputs: [string | undefined, string][] = [
+    [options.output, renderJson(report)],
+    [options.junit, renderJunit(report)],
+    [options.markdown, renderMarkdown(report)],
+  ];
+  for (const [file, body] of outputs) {
+    if (file === undefined) continue;
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, body, 'utf8');
+    written.push(file);
   }
-  const gated = GATE[options.failOn];
-  const exitCode = verdicts.some((verdict) => gated.includes(verdict.verdict)) ? 1 : 0;
-  return { report, rendered, exitCode };
+  return { report, rendered: render(report, options.format), exitCode, written };
 }
 
 function normalizePath(target: string): string {

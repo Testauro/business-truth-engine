@@ -487,3 +487,45 @@ describe('multi-rule, multi-trigger evaluation', () => {
     ).toThrow(/triggers on "order.paid"/);
   });
 });
+
+describe('trigger integrity and rule ordering', () => {
+  it('a trigger whose redeliveries disagree on content yields UNKNOWN even when the invoice is fine', () => {
+    const verdict = single(AFTER_DEADLINE, [
+      orderPaid({ deliveryId: 'd-1' }),
+      orderPaid({
+        deliveryId: 'd-2',
+        collectedAt: at(900),
+        payload: { orderId: 'ord_1', paymentId: 'pay_1', amount: 59.99, currency: 'USD' },
+      }),
+      invoiceCreated(),
+      invoicingStatus(),
+    ]);
+    expect(verdict.verdict).toBe('UNKNOWN');
+    expect(verdict.trigger.deliveries).toBe(2);
+    expect(codes(verdict).slice(0, 2)).toEqual([
+      'REDELIVERY_DEDUPLICATED',
+      'CONFLICTING_REDELIVERY',
+    ]);
+    expect(verdict.reasons[1]?.message).toContain('deliveries of trigger evt-order-1 disagree');
+  });
+
+  it('evaluateRules orders output by rule id regardless of input order', () => {
+    const receipt = { ...invoiceRule, id: 'receipt-sent' };
+    const verdicts = evaluateRules(
+      [receipt, invoiceRule],
+      EvidenceSet.from([orderPaid(), invoicingStatus()]),
+      {
+        clock: new FixedClock(AFTER_DEADLINE),
+      },
+    );
+    expect(verdicts.map((v) => v.ruleId)).toEqual(['invoice-created-once', 'receipt-sent']);
+    const reversed = evaluateRules(
+      [invoiceRule, receipt],
+      EvidenceSet.from([orderPaid(), invoicingStatus()]),
+      {
+        clock: new FixedClock(AFTER_DEADLINE),
+      },
+    );
+    expect(reversed).toEqual(verdicts);
+  });
+});

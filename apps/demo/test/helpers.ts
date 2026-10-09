@@ -32,7 +32,7 @@ export interface Harness {
 
 export async function startDemo(faults: readonly Fault[] = []): Promise<Harness> {
   const clock = new ManualClock(START);
-  const demo = buildDemo({ clock, faults });
+  const demo = buildDemo({ clock, manualClock: clock, faults });
   await demo.app.ready();
   return { demo, clock };
 }

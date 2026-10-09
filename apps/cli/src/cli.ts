@@ -1,7 +1,9 @@
 import { Command, CommanderError, InvalidArgumentError } from 'commander';
 import { loadRules, ruleJsonSchema } from '@bte/rules';
-import type { FailOn } from './evaluate-command.js';
+import type { OutputFormat } from './evaluate-command.js';
 import { runEvaluate } from './evaluate-command.js';
+import type { FailOn } from './report.js';
+import { EXIT_ERROR, EXIT_OK } from './report.js';
 
 export interface CliIo {
   stdout: (text: string) => void;
@@ -15,10 +17,11 @@ function parseFailOn(value: string): FailOn {
   throw new InvalidArgumentError('expected one of: fail, unknown, pending');
 }
 
-function parseFormat(value: string): 'text' | 'json' {
+function parseFormat(value: string): OutputFormat {
   const normalized = value.toLowerCase();
-  if (normalized === 'text' || normalized === 'json') return normalized;
-  throw new InvalidArgumentError('expected one of: text, json');
+  if (normalized === 'text' || normalized === 'json' || normalized === 'markdown')
+    return normalized;
+  throw new InvalidArgumentError('expected one of: text, json, markdown');
 }
 
 function parseIso(value: string): string {
@@ -48,8 +51,13 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
       'evaluation instant (defaults to wall clock; pass for reproducible output)',
       parseIso,
     )
-    .option('-f, --format <format>', 'text | json', parseFormat, 'text')
-    .option('-o, --output <file>', 'also write the JSON report to this file')
+    .option('-f, --format <format>', 'stdout format: text | json | markdown', parseFormat, 'text')
+    .option('-o, --output <file>', 'write the JSON report to this file')
+    .option('--junit <file>', 'write a JUnit XML report to this file')
+    .option(
+      '--markdown <file>',
+      'write a Markdown report to this file (e.g. for $GITHUB_STEP_SUMMARY)',
+    )
     .option(
       '--fail-on <verdict>',
       'exit 1 when any verdict is at least this bad: fail | unknown | pending',
@@ -61,8 +69,10 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
         rules: string[];
         evidence: string[];
         now?: string;
-        format: 'text' | 'json';
+        format: OutputFormat;
         output?: string;
+        junit?: string;
+        markdown?: string;
         failOn: FailOn;
       }) => {
         if (options.now === undefined) {
@@ -74,9 +84,12 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
           now: options.now,
           format: options.format,
           output: options.output,
+          junit: options.junit,
+          markdown: options.markdown,
           failOn: options.failOn,
         });
         io.stdout(result.rendered);
+        for (const file of result.written) io.stderr(`wrote ${file}\n`);
         state.exitCode = result.exitCode;
       },
     );
@@ -105,18 +118,22 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
   return program;
 }
 
-/** Run the CLI; returns the process exit code instead of exiting. */
+/**
+ * Run the CLI; returns the process exit code instead of exiting.
+ * 0 = gate passed, 1 = gate failed, 2 = could not evaluate (usage, rules or evidence errors).
+ */
 export async function runCli(argv: readonly string[], io: CliIo): Promise<number> {
-  const state: CliState = { exitCode: 0 };
+  const state: CliState = { exitCode: EXIT_OK };
   const program = buildProgram(io, state);
   try {
     await program.parseAsync([...argv], { from: 'user' });
     return state.exitCode;
   } catch (error) {
     if (error instanceof CommanderError) {
-      return error.exitCode;
+      // --help / --version exit 0; every usage error is an "could not evaluate" error.
+      return error.exitCode === 0 ? EXIT_OK : EXIT_ERROR;
     }
     io.stderr(`error: ${error instanceof Error ? error.message : String(error)}\n`);
-    return 2;
+    return EXIT_ERROR;
   }
 }

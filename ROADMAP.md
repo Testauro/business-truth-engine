@@ -36,12 +36,15 @@ system boundaries from evidence, independently of whether the UI test passed.
   `@demonstration` pair where the UI test passes and the BTE test fails by design. Traces retained
   on failure, HTML + JUnit reports under `bte-report/`.
 
-## Milestone D — Reports, CI gating, docs, OSS hygiene
+## Milestone D — Reports, CI gating, docs, OSS hygiene (DONE, see PROGRESS.md)
 
-- JUnit + JSON reporters for BTE verdicts; GitHub Actions job gating on FAIL (UNKNOWN as a
-  configurable gate); artifacts uploaded.
-- Developer setup docs, rule authoring guide, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY.md,
-  issue/PR templates, Dependabot.
+- CLI reports: JSON schema 2 with a resolved evidence index, JUnit XML (failure / skipped per gate,
+  evidence ids as properties), Markdown for step summaries; documented exit codes 0 / 1 / 2.
+- Quality gates: architecture boundaries enforced by ESLint, coverage thresholds, `check:cli` and
+  `check:scenarios` contract scripts, `pnpm verify` composite; CI matrix Node 24 / 26 with
+  artifacts, step summary and a `fail_on` workflow input; Dependabot.
+- Docs: architecture, reports and exit codes, development guide, CONTRIBUTING, SECURITY,
+  CODE_OF_CONDUCT, CHANGELOG, issue and PR templates, README quickstart.
 
 ## Later
 

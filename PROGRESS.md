@@ -126,7 +126,83 @@ Not yet verified / known gaps:
 - The E2E suite drives the in-process demo; `BTE_E2E_BASE_URL` against an external server is
   supported but was not exercised in this session.
 
-## Milestone D — Reports, CI gating, OSS hygiene: PARTIAL
+## Milestone D — Reports, CI gating, OSS hygiene: COMPLETE (2026-10-09)
 
-- Done in A/B/C: JSON report, exit-code gating, CI workflow (demo scenarios + Playwright), JUnit for unit and E2E, Apache-2.0 license.
-- Remaining: JUnit output for verdicts, CONTRIBUTING / SECURITY / CODE_OF_CONDUCT, templates.
+| Check                               | Command                                        | Result                                                                                                                                                      |
+| ----------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lint incl. architecture boundaries  | `pnpm lint`                                    | 0 problems; probe files importing `node:fs` / `fastify` / `@bte/rules` into core and `@bte/demo` into playwright were rejected (3 + 1 errors), then removed |
+| Typecheck                           | `pnpm typecheck`                               | 0 errors                                                                                                                                                    |
+| Format                              | `pnpm format:check`                            | clean                                                                                                                                                       |
+| Unit / integration / property tests | `pnpm test:coverage`                           | 21 files, 197 tests; coverage 97.41% statements, 88.32% branches, 97.42% functions, 98.66% lines; thresholds met                                            |
+| CLI contract                        | `pnpm check:cli`                               | 10 exit-code checks, reproducibility, 16 catalogued fixtures: all ok                                                                                        |
+| Demo scenarios                      | `pnpm check:scenarios`                         | 7 faults: UI confirmed in all; verdicts and exit codes as catalogued                                                                                        |
+| Playwright gated suite              | `pnpm test:e2e`                                | 16 passed                                                                                                                                                   |
+| Composite gate                      | `pnpm verify`                                  | passed end to end                                                                                                                                           |
+| Demonstration                       | `pnpm test:e2e:demonstration`                  | UI test passed, BTE test failed by design, exit 1                                                                                                           |
+| Demonstration gate                  | `pnpm check:demonstration`                     | asserts from JUnit: UI passed, BTE failed with MISSING_EXPECTED_OUTCOME; negative controls (wrong fault, no fault) rejected                                 |
+| Property-test stress                | 20 runs of `evaluate.property.test.ts`         | 0 failures                                                                                                                                                  |
+| Live demo with manual clock         | `BTE_DEMO_CLOCK=manual pnpm demo:start` + curl | checkout 303, `/admin/clock/advance` 121s, collect, CLI Markdown report FAIL on wrong-amount                                                                |
+| `pnpm demo:scenario -- --fault x`   | via pnpm                                       | works (after fix below)                                                                                                                                     |
+
+Delivered:
+
+- `apps/cli`: report schema 2 (`gate`, `exitCode`, resolved `evidence` index), `--junit`, `--markdown`,
+  `--format markdown`; exit codes 0 / 1 / 2 (usage errors now 2); `scripts/check-cli.sh`.
+- Quality gates: ESLint `no-restricted-imports` boundaries per package; Vitest coverage thresholds
+  (global 90/85/90/90, core 97/100/85/95); `scripts/check-demo-scenarios.sh`; `pnpm verify` and
+  `pnpm verify:quick`.
+- CI: `quality`, `test` (Node 24 and 26 matrix, coverage, CLI contract, scenarios, gated fixture
+  evaluation with `workflow_dispatch` input `fail_on`, Markdown step summary, artifacts) and `e2e`
+  (Playwright suite + demonstration must fail, HTML report and traces uploaded); Dependabot.
+- Docs: `docs/architecture.md`, `docs/reports.md`, `docs/development.md`, `CONTRIBUTING.md`,
+  `SECURITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`, issue / PR templates, README quickstart,
+  `.env.example` covering every variable.
+- Tests added for failure scenarios: `apps/cli/test/failures.test.ts` (malformed evidence with
+  file:line, invalid rule listing schema issues, empty rules dir, usage errors, gate escalation,
+  report files), `report.test.ts` (evidence index, JUnit mapping and escaping, Markdown),
+  `packages/core/test/assertions.test.ts`, `clock.test.ts`, `contracts.test.ts`, evidence-set
+  ties, conflicting trigger redelivery, multi-rule ordering, demo `config.test.ts` and clock control.
+
+Defects found and fixed during this milestone:
+
+- **Determinism bug in `EvidenceSet`** (found by a one-off property-test failure, reproduced by
+  reasoning about the generator): two deliveries with the same `eventId`, identical `collectedAt`,
+  no `deliveryId` and different payloads had no total order, so the canonical delivery depended on
+  input order. `deliveryOrder` now falls back to a stable content key; a direct unit test covers it
+  and 20 stress runs of the property suite are clean.
+- `pnpm demo:scenario -- --fault x` crashed because pnpm forwards the literal `--`; the scenario
+  entrypoint now strips it.
+- `scripts/check-demo-scenarios.sh` used an empty-array expansion that macOS bash 3.2 rejects under
+  `set -u`; replaced with the portable idiom.
+- `pnpm test:e2e:demonstration` ran zero tests (the config's `grepInvert` excluded the spec unless
+  `BTE_E2E_INCLUDE_DEMONSTRATION` was set) and still exited 1, which CI would have accepted as
+  "failed by design". The script now sets the variable, and `scripts/check-demonstration.sh` parses
+  the JUnit output to require the UI test to pass and the BTE test to fail with the expected reason.
+- Coverage thresholds were first set too high for the untested assertion operators, clocks and demo
+  config; tests were added rather than thresholds lowered, except core branches (85%) and core
+  statements (95%), which reflect defensive `unreachable` guards.
+
+## Release readiness (0.1.0)
+
+Ready to tag as `v0.1.0` from a local standpoint. Verified in this environment (macOS, Node 26.3.0,
+pnpm 10.34.6 via npx, Chromium headless shell 1248):
+
+- Every documented command in `docs/development.md` was executed and succeeded.
+- `pnpm verify` passes end to end; the demonstration fails for the right reason with trace and
+  attachments.
+- The CLI contract (verdicts, exit codes, reproducibility, report files) is covered by unit tests,
+  `check:cli`, and the fixture catalogue, which is the single source of truth for expected verdicts.
+
+Not verified here, and therefore release blockers until done:
+
+- **GitHub Actions has never run.** Nothing has been pushed. The workflow is written and its
+  shell blocks were executed locally with bash, but the Ubuntu runner, the Node 24 leg of the
+  matrix, `pnpm install --frozen-lockfile`, and `playwright install --with-deps` are unexercised.
+- Package publishing is not configured (all packages are `private`-adjacent workspace packages with
+  `files: dist`); publishing needs an explicit decision and approval.
+- No SBOM, signing, or provenance; add when publishing is decided.
+
+## What's next
+
+ROADMAP "Later": PostgreSQL evidence store, aggregate assertions, multi-trigger correlation,
+additional browsers in Playwright, and only then AI-assisted rule drafting.

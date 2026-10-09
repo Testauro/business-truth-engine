@@ -41,10 +41,15 @@ npx --yes pnpm@10 build            # tsc -b (project references)
 npx --yes pnpm@10 typecheck        # strict build + test typecheck
 npx --yes pnpm@10 lint             # eslint (type-aware)
 npx --yes pnpm@10 test             # vitest (unit + property + fixture tests)
+npx --yes pnpm@10 test:coverage    # same with coverage thresholds (bte-report/coverage)
+npx --yes pnpm@10 check:cli        # built CLI vs fixtures: verdicts, exit codes, reproducibility
+npx --yes pnpm@10 check:scenarios  # every demo fault -> NDJSON -> CLI, verdict asserted
 npx --yes pnpm@10 format:check     # prettier
 npx --yes pnpm@10 test:e2e         # Playwright suite (needs `pnpm build` first; chromium headless shell cached)
 npx --yes pnpm@10 test:e2e:demonstration   # the deliberate UI-passes / BTE-fails pair; exits 1 by design
-npx --yes pnpm@10 verify           # all of the above incl. e2e
+npx --yes pnpm@10 check:demonstration      # runs it and asserts from JUnit that it failed for the right reason
+npx --yes pnpm@10 verify:quick     # lint + typecheck + test (inner loop)
+npx --yes pnpm@10 verify           # the full gate: lint, typecheck, format, coverage, check:cli, check:scenarios, e2e
 node apps/cli/dist/main.js evaluate -r rules -e examples/fixtures/duplicate-invoice.ndjson --now 2026-01-15T10:03:00Z
 # demo: in-process scenario -> NDJSON -> CLI
 node apps/demo/dist/scenario.js --fault duplicate-invoice --out bte-report/demo/dup.ndjson
@@ -86,6 +91,17 @@ BTE_DEMO_CLOCK=manual node apps/demo/dist/main.js          # controllable clock:
   seeded faults; `bte.evaluate` for a single non-polling look (e.g. asserting PENDING).
 - `specs/demonstration.spec.ts` is `@demonstration`-tagged and excluded from the gate because its
   second test fails on purpose. Never "fix" it to pass.
+
+## Quality gates (all enforced by `pnpm verify` and CI)
+
+- Architecture boundaries are ESLint rules (`no-restricted-imports` overrides in `eslint.config.js`);
+  see `docs/architecture.md`. Do not relax them; move code instead.
+- Coverage thresholds live in `vitest.config.ts`. Raise them when coverage grows; lower them only
+  with a written reason in the PR.
+- CLI exit codes are a contract (`docs/reports.md`): 0 gate passed, 1 gate failed, 2 could not
+  evaluate. Report schema changes bump `REPORT_SCHEMA_VERSION` and the docs.
+- `examples/fixtures/cases.json` is the single source of truth for expected verdicts; unit tests
+  and `check:cli` both read it.
 
 ## Verification rules
 

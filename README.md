@@ -8,6 +8,23 @@ downstream invoice is missing, duplicated, or has the wrong amount. The ordinary
 is green. BTE independently verifies the approved business invariant from evidence and says
 `FAIL`, with the rule id and evidence ids that prove it.
 
+## Quickstart
+
+```bash
+git clone <this repo> && cd business-truth-engine
+npx --yes pnpm@10 install            # pnpm 10 via npx; Node 24+
+npx --yes pnpm@10 build
+# judge an evidence file against the rules (exit 1 = a business invariant failed)
+node apps/cli/dist/main.js evaluate --rules rules --evidence examples/fixtures/missing-invoice.ndjson --now 2026-01-15T10:03:00Z
+# machine-readable outputs for CI
+node apps/cli/dist/main.js evaluate --rules rules --evidence examples/fixtures/missing-invoice.ndjson --now 2026-01-15T10:03:00Z \
+  --output bte-report/bte.json --junit bte-report/bte.junit.xml --markdown bte-report/bte.md
+npx --yes pnpm@10 verify             # the full quality gate (lint, types, coverage, CLI, demo scenarios, Playwright)
+```
+
+Exit codes: `0` gate passed, `1` a verdict failed the gate (`--fail-on fail|unknown|pending`),
+`2` could not evaluate. Details in [docs/reports.md](docs/reports.md).
+
 ## How it works
 
 1. **Business invariants as code.** A versioned YAML rule names a trigger event, a correlation
@@ -180,8 +197,10 @@ npx --yes pnpm@10 verify     # lint + typecheck + test + format:check
 npx --yes pnpm@10 test:watch
 ```
 
-See [CLAUDE.md](CLAUDE.md) for architecture boundaries and engineering rules,
-[ROADMAP.md](ROADMAP.md) for what is next, and [PROGRESS.md](PROGRESS.md) for verified status.
+Docs: [architecture](docs/architecture.md) · [reports and exit codes](docs/reports.md) ·
+[writing rules](docs/rules.md) · [development guide](docs/development.md) · ADRs in `docs/adr/` ·
+[CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md) · [CHANGELOG](CHANGELOG.md).
+[ROADMAP.md](ROADMAP.md) lists what is next and [PROGRESS.md](PROGRESS.md) the verified status.
 
 ## License
 

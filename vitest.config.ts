@@ -21,6 +21,23 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
+      // Process entry points are exercised by the shell-level checks (scripts/, CI), not by vitest.
+      exclude: [
+        'apps/*/src/main.ts',
+        'apps/demo/src/scenario.ts',
+        'packages/playwright/src/verifier.ts',
+        'packages/playwright/src/sources.ts',
+      ],
+      reporter: ['text-summary', 'html', 'lcov'],
+      reportsDirectory: 'bte-report/coverage',
+      // Quality gate: the deterministic engine must stay fully exercised; everything else high.
+      thresholds: {
+        lines: 90,
+        functions: 90,
+        branches: 85,
+        statements: 90,
+        'packages/core/src/**/*.ts': { lines: 97, functions: 100, branches: 85, statements: 95 },
+      },
     },
   },
 });

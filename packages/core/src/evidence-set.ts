@@ -1,6 +1,6 @@
 import type { EvidenceEvent, EvidenceRecord, SourceStatus } from './contracts/evidence.js';
 import { toEpochMillis } from './clock.js';
-import { jsonEquals } from './path.js';
+import { jsonEquals, stableKey } from './path.js';
 
 /**
  * A deduplicated event: one business event identity plus every delivery of it.
@@ -24,12 +24,30 @@ function compareEvents(a: EvidenceEvent, b: EvidenceEvent): number {
   return da < db ? -1 : da > db ? 1 : 0;
 }
 
+/**
+ * Total order over deliveries of one event: collection time, delivery id, then
+ * a content key. The content tiebreak matters: two deliveries with the same
+ * eventId, the same collectedAt and no deliveryId but different payloads must
+ * still pick the same canonical delivery whatever order they arrived in.
+ */
 function deliveryOrder(a: EvidenceEvent, b: EvidenceEvent): number {
   const byCollected = toEpochMillis(a.collectedAt) - toEpochMillis(b.collectedAt);
   if (byCollected !== 0) return byCollected;
   const da = a.deliveryId ?? '';
   const db = b.deliveryId ?? '';
-  return da < db ? -1 : da > db ? 1 : 0;
+  if (da !== db) return da < db ? -1 : 1;
+  const ka = contentKey(a);
+  const kb = contentKey(b);
+  return ka < kb ? -1 : ka > kb ? 1 : 0;
+}
+
+function contentKey(event: EvidenceEvent): string {
+  return stableKey({
+    type: event.type,
+    source: event.source,
+    occurredAt: event.occurredAt,
+    payload: event.payload,
+  });
 }
 
 function sameBusinessContent(a: EvidenceEvent, b: EvidenceEvent): boolean {

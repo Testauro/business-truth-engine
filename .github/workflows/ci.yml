@@ -4,15 +4,29 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      fail_on:
+        description: 'BTE gate for the fixture evaluation step: fail | unknown | pending'
+        default: fail
+        type: choice
+        options: [fail, unknown, pending]
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BTE_FAIL_ON: ${{ github.event.inputs.fail_on || 'fail' }}
+
 jobs:
-  verify:
-    name: Lint, typecheck, test, evaluate fixtures
+  quality:
+    name: Lint, typecheck, format, boundaries
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -26,46 +40,87 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm format:check
-      - run: pnpm test
+
+  test:
+    name: Unit, CLI, demo scenarios (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24, 26]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Unit, integration and property tests with coverage thresholds
+        run: pnpm test:coverage
         env:
           CI: 'true'
-      - name: Evaluate fixtures with the built CLI (expect FAIL exit code on seeded defect)
+      - name: CLI contract (fixtures, exit codes, reproducibility)
+        run: pnpm check:cli
+      - name: Demo scenarios -> NDJSON -> CLI (every seeded fault yields its catalogued verdict)
+        run: pnpm check:scenarios
+      - name: Gate the fixture catalogue with the selected --fail-on and publish a step summary
         run: |
-          node apps/cli/dist/main.js validate --rules rules
-          node apps/cli/dist/main.js evaluate --rules rules --evidence examples/fixtures/normal.ndjson --now 2026-01-15T10:03:00Z --format json --output bte-report/normal.json
-          if node apps/cli/dist/main.js evaluate --rules rules --evidence examples/fixtures/duplicate-invoice.ndjson --now 2026-01-15T10:03:00Z --format json --output bte-report/duplicate-invoice.json; then
-            echo "expected a FAIL exit code for the duplicate-invoice fixture" >&2; exit 1
-          fi
-      - name: Demo scenarios -> NDJSON -> CLI (every seeded fault must yield its catalogued verdict)
-        run: |
+          set +e
+          node apps/cli/dist/main.js evaluate --rules rules --evidence examples/fixtures/normal.ndjson examples/fixtures/duplicate-delivery.ndjson \
+            --now 2026-01-15T10:03:00Z --fail-on "$BTE_FAIL_ON" --format json --output bte-report/gate.json \
+            --junit bte-report/gate.junit.xml --markdown bte-report/gate.md
+          code=$?
           set -e
-          mkdir -p bte-report/demo
-          check() { # fault expected-summary
-            if [ "$1" = none ]; then args=(); else args=(--fault "$1"); fi
-            node apps/demo/dist/scenario.js "${args[@]}" --out "bte-report/demo/$1.ndjson" > "bte-report/demo/$1.meta.json"
-            summary=$(node apps/cli/dist/main.js evaluate --rules rules --evidence "bte-report/demo/$1.ndjson" --now 2026-01-15T10:02:31Z --format json --output "bte-report/demo/$1.json" >/dev/null 2>&1; node -e "const r=require('./bte-report/demo/$1.json');console.log(Object.entries(r.summary).filter(([,n])=>n>0).map(([k,n])=>k+'='+n).join(','))")
-            echo "$1 -> $summary"
-            [ "$summary" = "$2" ] || { echo "expected $2" >&2; exit 1; }
-          }
-          check none PASS=1
-          check missing-invoice FAIL=1
-          check duplicate-invoice FAIL=1
-          check wrong-amount FAIL=1
-          check delayed-invoice FAIL=1
-          check invoicing-unavailable UNKNOWN=1
-          check duplicate-delivery PASS=1
-      - name: Install Playwright browser
-        run: pnpm --filter @bte/e2e exec playwright install --with-deps chromium --only-shell
-      - name: Playwright gated suite
-        run: pnpm test:e2e
-      - name: Playwright demonstration (UI passes, BTE fails by design; must exit non-zero)
-        run: |
-          if pnpm test:e2e:demonstration; then
-            echo "demonstration unexpectedly passed: BTE did not flag the missing invoice" >&2; exit 1
-          fi
+          cat bte-report/gate.md >> "$GITHUB_STEP_SUMMARY"
+          echo "bte evaluate exit code: $code (0 = gate passed, 1 = gate failed, 2 = could not evaluate)"
+          test "$code" -eq 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: bte-report
-          path: bte-report/
+          name: bte-report-node${{ matrix.node }}
+          path: |
+            bte-report/**/*.json
+            bte-report/**/*.xml
+            bte-report/**/*.md
+            bte-report/**/*.ndjson
+            bte-report/coverage/lcov.info
+          if-no-files-found: ignore
+
+  e2e:
+    name: Playwright (checkout UI vs. business truth)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Install Playwright browser
+        run: pnpm --filter @bte/e2e exec playwright install --with-deps chromium --only-shell
+      - name: Gated suite (UI, API, business-truth matrix)
+        run: pnpm test:e2e
+      - name: Demonstration (UI test must pass, BTE test must fail with MISSING_EXPECTED_OUTCOME)
+        run: |
+          pnpm check:demonstration | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            bte-report/e2e-html
+            bte-report/e2e-junit.xml
+            bte-report/e2e-results/**/trace.zip
+            bte-report/e2e-results/**/*.png
           if-no-files-found: ignore

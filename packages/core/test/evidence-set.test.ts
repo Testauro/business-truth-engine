@@ -55,3 +55,61 @@ describe('EvidenceSet', () => {
     expect(ids).toEqual(['b', 'a', 'z']);
   });
 });
+
+describe('EvidenceSet edge cases', () => {
+  it('on an attestation tie, the non-authoritative (conservative) one wins regardless of order', () => {
+    const trusted = invoicingStatus({ observedAt: at(1_000), authoritative: true });
+    const cached = invoicingStatus({ observedAt: at(1_000), authoritative: false });
+    expect(EvidenceSet.from([trusted, cached]).sourceStatus('invoicing')?.authoritative).toBe(
+      false,
+    );
+    expect(EvidenceSet.from([cached, trusted]).sourceStatus('invoicing')?.authoritative).toBe(
+      false,
+    );
+  });
+
+  it('orders deliveries by collectedAt, then deliveryId, and falls back to empty ids', () => {
+    const a = invoiceCreated({ collectedAt: at(5_000), deliveryId: 'b' });
+    const b = invoiceCreated({ collectedAt: at(5_000), deliveryId: 'a' });
+    const c = invoiceCreated({ collectedAt: at(5_000) });
+    const set = EvidenceSet.from([a, b, c]);
+    expect(set.event('evt-inv-1')?.deliveries.map((d) => d.deliveryId)).toEqual([
+      undefined,
+      'a',
+      'b',
+    ]);
+  });
+
+  it('exposes empty sets and sorted sources', () => {
+    expect(EvidenceSet.empty().size).toBe(0);
+    expect(EvidenceSet.empty().events).toEqual([]);
+    const set = EvidenceSet.from([invoicingStatus(), { ...invoicingStatus(), source: 'orders' }]);
+    expect(set.sources.map((s) => s.source)).toEqual(['invoicing', 'orders']);
+  });
+
+  it('breaks occurredAt/collectedAt ties by eventId then deliveryId in type listings', () => {
+    const x = invoiceCreated({ eventId: 'same', deliveryId: 'y' });
+    const y = invoiceCreated({ eventId: 'same', deliveryId: 'x' });
+    const z = invoiceCreated({ eventId: 'other' });
+    const ids = EvidenceSet.from([x, y, z])
+      .eventsOfType('invoice.created')
+      .map((e) => e.canonical.eventId);
+    expect(ids).toEqual(['other', 'same']);
+  });
+});
+
+describe('EvidenceSet determinism under full ties', () => {
+  it('picks the same canonical delivery when eventId, collectedAt and deliveryId all tie but content differs', () => {
+    const cheap = invoiceCreated({
+      payload: { invoiceId: 'inv_1', orderId: 'ord_1', amount: 1, currency: 'USD' },
+    });
+    const dear = invoiceCreated({
+      payload: { invoiceId: 'inv_1', orderId: 'ord_1', amount: 49.99, currency: 'USD' },
+    });
+    const forward = EvidenceSet.from([cheap, dear]).event('evt-inv-1');
+    const reversed = EvidenceSet.from([dear, cheap]).event('evt-inv-1');
+    expect(forward?.canonical).toEqual(reversed?.canonical);
+    expect(forward?.conflicting).toBe(true);
+    expect(reversed?.deliveries).toEqual(forward?.deliveries);
+  });
+});

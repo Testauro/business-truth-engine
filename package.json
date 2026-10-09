@@ -20,11 +20,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bte": "node apps/cli/dist/main.js",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check && pnpm test:e2e",
+    "verify": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test:coverage && pnpm check:cli && pnpm check:scenarios && pnpm test:e2e",
     "demo:start": "node apps/demo/dist/main.js",
     "demo:scenario": "node apps/demo/dist/scenario.js",
     "test:e2e": "pnpm --filter @bte/e2e test",
-    "test:e2e:demonstration": "pnpm --filter @bte/e2e test:demonstration"
+    "test:e2e:demonstration": "pnpm --filter @bte/e2e test:demonstration",
+    "test:coverage": "vitest run --coverage",
+    "check:scenarios": "bash scripts/check-demo-scenarios.sh",
+    "check:cli": "bash scripts/check-cli.sh",
+    "verify:quick": "pnpm lint && pnpm typecheck && pnpm test",
+    "check:demonstration": "bash scripts/check-demonstration.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -37,7 +42,8 @@
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.71.1",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "@vitest/coverage-v8": "^5.0.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

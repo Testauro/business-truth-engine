@@ -13,7 +13,12 @@ import { ManualClock, toIso } from '@bte/core';
 import { runScenario, type ScenarioResult } from './scenario-runner.js';
 import { FAULTS, FaultSchema, type Fault } from './faults.js';
 
+// pnpm forwards a literal `--` when invoked as `pnpm demo:scenario -- --fault x`; drop it.
+const argv = process.argv.slice(2);
+if (argv[0] === '--') argv.shift();
+
 const { values } = parseArgs({
+  args: argv,
   options: {
     fault: { type: 'string', multiple: true, default: [] },
     out: { type: 'string' },

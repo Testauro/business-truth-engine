@@ -1,6 +1,22 @@
 export { buildProgram, runCli } from './cli.js';
 export type { CliIo, CliState } from './cli.js';
-export { makeClock, runEvaluate } from './evaluate-command.js';
-export type { EvaluateCommandOptions, EvaluateCommandResult, FailOn } from './evaluate-command.js';
-export { REPORT_SCHEMA_VERSION, renderJson, renderText, summarize } from './report.js';
-export type { EvaluationReport } from './report.js';
+export { makeClock, render, runEvaluate } from './evaluate-command.js';
+export type {
+  EvaluateCommandOptions,
+  EvaluateCommandResult,
+  OutputFormat,
+} from './evaluate-command.js';
+export {
+  EXIT_ERROR,
+  EXIT_GATE_FAILED,
+  EXIT_OK,
+  GATE,
+  REPORT_SCHEMA_VERSION,
+  indexEvidence,
+  renderJson,
+  renderJunit,
+  renderMarkdown,
+  renderText,
+  summarize,
+} from './report.js';
+export type { EvaluationReport, EvidenceReference, FailOn } from './report.js';

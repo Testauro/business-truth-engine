@@ -46,6 +46,109 @@ export default tseslint.config(
       'no-console': ['error', { allow: ['warn', 'error'] }],
     },
   },
+  // ---- Architecture boundaries (docs/architecture.md). Violations fail `pnpm lint`. ----
+  {
+    files: ['packages/core/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['node:*', 'fs', 'path', 'os', 'child_process', 'http', 'https', 'url'],
+              message: 'packages/core must not touch the platform; it is pure.',
+            },
+            {
+              group: ['@bte/*'],
+              message: 'packages/core depends on nothing else in the workspace.',
+            },
+            {
+              group: [
+                'fastify',
+                'fastify/*',
+                '@fastify/*',
+                '@playwright/*',
+                'playwright*',
+                'commander',
+                'yaml',
+                'pg',
+                'pg/*',
+              ],
+              message: 'packages/core must not know about frameworks, storage or I/O libraries.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/rules/src/**/*.ts', 'packages/evidence/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@bte/cli', '@bte/demo', '@bte/playwright', '@bte/rules', '@bte/evidence'],
+              message: 'rules/evidence depend on core only.',
+            },
+            {
+              group: ['fastify', 'fastify/*', '@fastify/*', '@playwright/*', 'playwright*'],
+              message: 'no framework code in library packages.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/playwright/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@bte/demo', '@bte/cli', 'fastify', 'fastify/*', '@fastify/*'],
+              message: 'the Playwright package is SUT-agnostic.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/demo/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@bte/cli', '@bte/playwright', '@bte/rules'],
+              message: 'the demo emits evidence; it never evaluates rules.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/demo/src/domain/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@bte/evidence', '../evidence/*', '../../evidence/*'],
+              message: 'domain modules know nothing about evidence collection.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   {
     files: ['tests/e2e/**/*.ts'],
     rules: {

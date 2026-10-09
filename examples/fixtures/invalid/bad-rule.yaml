@@ -1,0 +1,9 @@
+# invalid: cardinality can never fail and the window is not a duration
+id: never-fails
+version: 1
+trigger: { type: order.paid, correlationKey: orderId }
+expectations:
+  - type: invoice.created
+    source: invoicing
+    window: { within: 2 minutes }
+    cardinality: { min: 0 }
