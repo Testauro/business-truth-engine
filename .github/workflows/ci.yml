@@ -36,6 +36,24 @@ jobs:
           if node apps/cli/dist/main.js evaluate --rules rules --evidence examples/fixtures/duplicate-invoice.ndjson --now 2026-01-15T10:03:00Z --format json --output bte-report/duplicate-invoice.json; then
             echo "expected a FAIL exit code for the duplicate-invoice fixture" >&2; exit 1
           fi
+      - name: Demo scenarios -> NDJSON -> CLI (every seeded fault must yield its catalogued verdict)
+        run: |
+          set -e
+          mkdir -p bte-report/demo
+          check() { # fault expected-summary
+            if [ "$1" = none ]; then args=(); else args=(--fault "$1"); fi
+            node apps/demo/dist/scenario.js "${args[@]}" --out "bte-report/demo/$1.ndjson" > "bte-report/demo/$1.meta.json"
+            summary=$(node apps/cli/dist/main.js evaluate --rules rules --evidence "bte-report/demo/$1.ndjson" --now 2026-01-15T10:02:31Z --format json --output "bte-report/demo/$1.json" >/dev/null 2>&1; node -e "const r=require('./bte-report/demo/$1.json');console.log(Object.entries(r.summary).filter(([,n])=>n>0).map(([k,n])=>k+'='+n).join(','))")
+            echo "$1 -> $summary"
+            [ "$summary" = "$2" ] || { echo "expected $2" >&2; exit 1; }
+          }
+          check none PASS=1
+          check missing-invoice FAIL=1
+          check duplicate-invoice FAIL=1
+          check wrong-amount FAIL=1
+          check delayed-invoice FAIL=1
+          check invoicing-unavailable UNKNOWN=1
+          check duplicate-delivery PASS=1
       - uses: actions/upload-artifact@v4
         if: always()
         with:

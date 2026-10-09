@@ -20,6 +20,39 @@ export class FixedClock implements Clock {
   }
 }
 
+/**
+ * A clock that only moves when told to. Used by integration tests and demo
+ * scenarios so timelines (deadlines, delays) are controlled, not awaited.
+ */
+export class ManualClock implements Clock {
+  #now: number;
+
+  constructor(start: number | string | Date) {
+    this.#now = toEpochMillis(start);
+  }
+
+  now(): number {
+    return this.#now;
+  }
+
+  advance(millis: number): number {
+    if (!Number.isFinite(millis) || millis < 0) {
+      throw new TypeError(
+        `ManualClock.advance expects a non-negative number, got ${String(millis)}`,
+      );
+    }
+    this.#now += millis;
+    return this.#now;
+  }
+
+  set(instant: number | string | Date): number {
+    const next = toEpochMillis(instant);
+    if (next < this.#now) throw new TypeError('ManualClock cannot move backwards');
+    this.#now = next;
+    return this.#now;
+  }
+}
+
 /** The wall clock. Only adapters (CLI, Playwright) should construct this. */
 export class SystemClock implements Clock {
   now(): number {

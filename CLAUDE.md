@@ -6,16 +6,16 @@ come only from evidence.
 
 ## Architecture boundaries (enforced; do not cross)
 
-| Package / app         | Owns                                                                   | May depend on                      |
-| --------------------- | ---------------------------------------------------------------------- | ---------------------------------- |
-| `packages/core`       | Rule + evidence contracts (Zod), `EvidenceSet` dedup, evaluator, clock | `zod` only. No I/O, no Node APIs.  |
-| `packages/rules`      | YAML rule loading / validation                                         | core, `yaml`, Node fs              |
-| `packages/evidence`   | NDJSON read/write, in-memory store                                     | core, Node fs                      |
-| `packages/playwright` | (Milestone C) fixtures that record evidence from Playwright tests      | core, evidence, `@playwright/test` |
-| `apps/cli`            | `bte evaluate / validate / schema`, JSON + text reports                | core, rules, evidence, `commander` |
-| `apps/demo`           | (Milestone B) Fastify order/payment/invoice demo with seeded faults    | fastify; never imported by core    |
-| `rules/`              | Versioned business invariants (YAML)                                   |                                    |
-| `examples/fixtures/`  | NDJSON evidence cases + `cases.json` expected verdicts                 |                                    |
+| Package / app         | Owns                                                                                            | May depend on                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `packages/core`       | Rule + evidence contracts (Zod), `EvidenceSet` dedup, evaluator, clock                          | `zod` only. No I/O, no Node APIs.                           |
+| `packages/rules`      | YAML rule loading / validation                                                                  | core, `yaml`, Node fs                                       |
+| `packages/evidence`   | NDJSON read/write, in-memory store                                                              | core, Node fs                                               |
+| `packages/playwright` | (Milestone C) fixtures that record evidence from Playwright tests                               | core, evidence, `@playwright/test`                          |
+| `apps/cli`            | `bte evaluate / validate / schema`, JSON + text reports                                         | core, rules, evidence, `commander`                          |
+| `apps/demo`           | Fastify shop: orders, payments, invoicing modules, seeded faults, read-only `EvidenceCollector` | core (contracts), evidence, fastify; never imported by core |
+| `rules/`              | Versioned business invariants (YAML)                                                            |                                                             |
+| `examples/fixtures/`  | NDJSON evidence cases + `cases.json` expected verdicts                                          |                                                             |
 
 The core engine must stay independent of Playwright, Fastify, storage, and LLM clients.
 Adapters talk to core only through the typed contracts in `packages/core/src/contracts`.
@@ -43,7 +43,24 @@ npx --yes pnpm@10 test             # vitest (unit + property + fixture tests)
 npx --yes pnpm@10 format:check     # prettier
 npx --yes pnpm@10 verify           # all of the above
 node apps/cli/dist/main.js evaluate -r rules -e examples/fixtures/duplicate-invoice.ndjson --now 2026-01-15T10:03:00Z
+# demo: in-process scenario -> NDJSON -> CLI
+node apps/demo/dist/scenario.js --fault duplicate-invoice --out bte-report/demo/dup.ndjson
+node apps/cli/dist/main.js evaluate -r rules -e bte-report/demo/dup.ndjson --now 2026-01-15T10:02:31Z
+BTE_DEMO_FAULTS=wrong-amount node apps/demo/dist/main.js   # live server on :3000
 ```
+
+## Demo app rules (apps/demo)
+
+- Faults live only in `domain/invoicing.ts` (plus `duplicate-delivery` in the collector). Checkout and
+  payment code paths never branch on faults; the UI must look identical with or without them.
+- `evidence/collector.ts` reads through `OrdersReadModel` / `InvoicesReadModel` only. It never
+  calls command methods and the domain modules never import anything evidence-related.
+- Every `collect()` emits a `source` attestation per system with `completeThrough` = collection
+  instant (synchronous snapshot), or `status: unavailable` when the read throws.
+- Delayed invoices materialise in `InvoicingService.tick()`; `createdAt` is the tick time so earlier
+  watermarks stay truthful. Tests call `tick()` explicitly; the server ticks on traffic and a timer.
+- Demo time comes from the injected `Clock` (`ManualClock` in tests/scenarios, `SystemClock` live).
+  Ids come from `IdSequence`, never randomness, so scenario output is byte-reproducible.
 
 ## Code standards
 

@@ -1,0 +1,35 @@
+{
+  "name": "@bte/demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Business Truth Engine demo: a Fastify checkout with orders, payments and invoicing, seeded business faults, and an independent evidence collector.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/main.js",
+    "scenario": "node dist/scenario.js",
+    "test": "vitest run --root ../.. apps/demo"
+  },
+  "dependencies": {
+    "@bte/core": "workspace:*",
+    "@bte/evidence": "workspace:*",
+    "@fastify/formbody": "^9.0.1",
+    "fastify": "^5.12.5",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@bte/rules": "workspace:*"
+  }
+}

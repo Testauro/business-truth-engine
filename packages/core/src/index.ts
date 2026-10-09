@@ -1,4 +1,4 @@
-export { FixedClock, SystemClock, toEpochMillis, toIso } from './clock.js';
+export { FixedClock, ManualClock, SystemClock, toEpochMillis, toIso } from './clock.js';
 export type { Clock } from './clock.js';
 export { isDuration, parseDuration } from './duration.js';
 export { getPath, jsonEquals, stableKey } from './path.js';

@@ -14,16 +14,17 @@ system boundaries from evidence, independently of whether the UI test passed.
   unavailable source, missing attestation, no watermark, non-authoritative, lagging source,
   duplicate delivery, out-of-order, late, and mixed orders.
 
-## Milestone B — Runnable demo with seeded faults
+## Milestone B — Runnable demo with seeded faults (DONE, see PROGRESS.md)
 
-- `apps/demo`: Fastify app with checkout UI (server-rendered HTML + minimal JS), orders,
-  payments, and invoicing modules behind one process; in-memory state.
-- Fault injection via env / admin endpoint: `missing-invoice`, `duplicate-invoice`,
-  `wrong-amount`, `invoicing-unavailable`, `delayed-invoice`, `duplicate-delivery`.
-- Authoritative evidence collection: an evidence collector queries the invoicing system of
-  record and emits `invoice.created` events plus `source` attestations with watermarks;
-  orders/payments emit `order.paid`. Output: NDJSON file per run.
-- Demo-level tests (Vitest + Fastify inject) for each fault mode.
+- `apps/demo`: Fastify 5 shop with server-rendered checkout, JSON API, and orders / payments /
+  invoicing modules behind one process; in-memory state; deterministic ids and injected clock.
+- Fault injection via `BTE_DEMO_FAULTS` and `/admin/faults`: `missing-invoice`,
+  `duplicate-invoice`, `wrong-amount`, `invoicing-unavailable`, `delayed-invoice`, `duplicate-delivery`.
+- `EvidenceCollector` reads authoritative state through read-only ports and emits `order.paid`,
+  `invoice.created`, and per-source attestations with watermarks; served as NDJSON on `/evidence`
+  and written by `scenario.js` for the CLI.
+- 34 Vitest integration tests (Fastify inject): HTTP behaviour, collector contract, and the
+  fault-to-verdict matrix evaluated with the real rule through `@bte/core`.
 
 ## Milestone C — Playwright demonstration
 

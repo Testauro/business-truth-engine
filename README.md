@@ -79,11 +79,56 @@ Every case in `examples/fixtures/` is catalogued with its expected verdict in
 | `out-of-order`               | PASS      | file order differs from business order              |
 | `mixed-orders`               | FAIL+PASS | one verdict per paid order                          |
 
+## The demo: a green checkout with a broken invoice
+
+`apps/demo` is a small Fastify shop. Orders, payments, and invoicing are separate modules; the
+checkout UI and payment path are correct, and the faults are seeded only downstream in invoicing.
+
+```bash
+npx --yes pnpm@10 build
+# One in-process checkout with a seeded fault, clock advanced past the 120s deadline,
+# evidence collected from the systems of record and written as NDJSON:
+node apps/demo/dist/scenario.js --fault wrong-amount --out bte-report/demo/wrong-amount.ndjson
+# {"faults":["wrong-amount"],"orderId":"ord_0001","paymentId":"pay_0001","total":50.97,"uiConfirmed":true,"evaluateAt":"2026-01-15T10:02:31.000Z"}
+node apps/cli/dist/main.js evaluate -r rules -e bte-report/demo/wrong-amount.ndjson --now 2026-01-15T10:02:31Z
+```
+
+```
+FAIL    invoice-created-once@v1  orderId="ord_0001"  trigger=order.paid:ord_0001:pay_0001 (2026-01-15T10:00:00.000Z)
+        - ASSERTION_MISMATCH: invoice.created invoice.created:inv_0001: "amount" is 24.99, expected equals 50.97 [invoice.created:inv_0001, order.paid:ord_0001:pay_0001]
+```
+
+`uiConfirmed: true` is the point: the customer saw "Order confirmed. Payment received: $50.97".
+
+| `--fault`               | What invoicing does                              | Verdict     |
+| ----------------------- | ------------------------------------------------ | ----------- |
+| (none)                  | one correct invoice                              | PASS        |
+| `missing-invoice`       | drops the event                                  | FAIL        |
+| `duplicate-invoice`     | issues two invoices                              | FAIL        |
+| `wrong-amount`          | bills only the first line item                   | FAIL        |
+| `delayed-invoice`       | issues the invoice 150s later (deadline is 120s) | FAIL (late) |
+| `invoicing-unavailable` | refuses queries                                  | UNKNOWN     |
+| `duplicate-delivery`    | evidence pipeline delivers every record twice    | PASS        |
+
+Run it as a real server and drive it by hand:
+
+```bash
+BTE_DEMO_FAULTS=duplicate-invoice node apps/demo/dist/main.js   # http://127.0.0.1:3000
+# place an order in the browser, then:
+curl -X POST http://127.0.0.1:3000/evidence/collect
+curl http://127.0.0.1:3000/evidence > live.ndjson
+node apps/cli/dist/main.js evaluate -r rules -e live.ndjson --now "$(date -u -v+130S +%Y-%m-%dT%H:%M:%SZ)"
+```
+
+Faults can be toggled at runtime on `/admin/faults`. The evidence collector only ever reads the
+orders and invoicing systems of record and attests each read with a completeness watermark; the
+engine never imports the demo.
+
 ## Repository layout
 
 ```
 apps/cli              bte command line
-apps/demo             (Milestone B) Fastify order/payment/invoice demo with seeded faults
+apps/demo             Fastify shop: orders / payments / invoicing, seeded faults, evidence collector
 packages/core         contracts + deterministic evaluator (no I/O)
 packages/rules        YAML rule loading
 packages/evidence     NDJSON evidence I/O

@@ -20,7 +20,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bte": "node apps/cli/dist/main.js",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check"
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check",
+    "demo:start": "node apps/demo/dist/main.js",
+    "demo:scenario": "node apps/demo/dist/scenario.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
