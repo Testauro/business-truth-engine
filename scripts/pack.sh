@@ -13,10 +13,14 @@ done
 # Sanity: every tarball ships dist + types, and no src/ or tests.
 status=0
 for t in "$OUT"/*.tgz; do
-  if ! tar -tzf "$t" | grep -q "package/dist/index.js"; then echo "FAIL $t has no dist/index.js" >&2; status=1; fi
-  if ! tar -tzf "$t" | grep -q "package/dist/index.d.ts"; then echo "FAIL $t has no dist/index.d.ts" >&2; status=1; fi
-  if tar -tzf "$t" | grep -qE "package/(src|test)/"; then echo "FAIL $t ships sources or tests" >&2; status=1; fi
+  # List once into a variable: piping tar into `grep -q` under pipefail makes tar die of SIGPIPE
+  # on larger tarballs (GNU tar), which read as a failed check.
+  listing=$(tar -tzf "$t")
+  if ! grep -q "package/dist/index.js" <<< "$listing"; then echo "FAIL $t has no dist/index.js" >&2; status=1; fi
+  if ! grep -q "package/dist/index.d.ts" <<< "$listing"; then echo "FAIL $t has no dist/index.d.ts" >&2; status=1; fi
+  if grep -qE "package/(src|test)/" <<< "$listing"; then echo "FAIL $t ships sources or tests" >&2; status=1; fi
   printf '%-40s %6s KB\n' "$(basename "$t")" "$(( $(stat -f%z "$t" 2>/dev/null || stat -c%s "$t") / 1024 ))"
 done
-tar -tzf "$OUT"/bte-cli-*.tgz | grep -q "package/dist/main.js" || { echo "FAIL cli tarball has no bin" >&2; status=1; }
+cli_listing=$(tar -tzf "$OUT"/bte-cli-*.tgz)
+grep -q "package/dist/main.js" <<< "$cli_listing" || { echo "FAIL cli tarball has no bin" >&2; status=1; }
 exit $status
