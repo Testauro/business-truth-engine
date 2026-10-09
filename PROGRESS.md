@@ -240,7 +240,7 @@ Verification after fixes (actual runs): build + lint + typecheck + format clean;
 7/7 as catalogued; `test:e2e` 16 passed; `check:demonstration` UI passed and BTE failed with
 MISSING_EXPECTED_OUTCOME.
 
-## PostgreSQL evidence store (ROADMAP "Later"): COMPLETE locally (2026-10-09)
+## PostgreSQL evidence store (ROADMAP "Later"): COMPLETE (2026-10-09)
 
 | Check                                        | Command                                                                      | Result                                                                                                                                                  |
 | -------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -253,7 +253,9 @@ Delivered: `packages/evidence-postgres` (schema with append-only triggers, `Post
 with `migrate` / `appendAll` / `load` / `snapshot` / `counts`, `redactConnectionString`), CLI
 `ingest` and `--postgres` / `--postgres-schema` / `--collected-until`, ADR 0004, docs, CI service.
 
-Not verified here: the CI `services: postgres` job has not run yet (not pushed).
+CI: pushed as `74978b0`; run 37890400497 green in 1.2 min on all four jobs. Both test-job logs show
+`packages/evidence-postgres/test/store.test.ts` (11 tests) and `apps/cli/test/postgres.test.ts`
+(5 tests) executing against the `postgres:17` service, not skipping.
 
 ## What's next
 
