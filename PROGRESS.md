@@ -184,7 +184,7 @@ Defects found and fixed during this milestone:
 
 ## Release readiness (0.1.0)
 
-Ready to tag as `v0.1.0` from a local standpoint. Verified in this environment (macOS, Node 26.3.0,
+Ready to tag as `v0.1.0`: every gate passes locally and in GitHub Actions on Node 24 and 26. Verified in this environment (macOS, Node 26.3.0,
 pnpm 10.34.6 via npx, Chromium headless shell 1248):
 
 - Every documented command in `docs/development.md` was executed and succeeded.
@@ -193,11 +193,15 @@ pnpm 10.34.6 via npx, Chromium headless shell 1248):
 - The CLI contract (verdicts, exit codes, reproducibility, report files) is covered by unit tests,
   `check:cli`, and the fixture catalogue, which is the single source of truth for expected verdicts.
 
-Not verified here, and therefore release blockers until done:
+Remaining before a public release:
 
-- **GitHub Actions has never run.** Nothing has been pushed. The workflow is written and its
-  shell blocks were executed locally with bash, but the Ubuntu runner, the Node 24 leg of the
-  matrix, `pnpm install --frozen-lockfile`, and `playwright install --with-deps` are unexercised.
+- ~~GitHub Actions has never run~~ **Resolved 2026-10-09.** Pushed to
+  https://github.com/Testauro/business-truth-engine (private). Run 37887740270 failed in the
+  quality job because type-aware lint ran before `dist/` existed (198 unsafe-type errors); fixed in
+  `713c04f` by building first. Run 37887873081 then passed all four jobs in 1.6 minutes: quality,
+  test on Node 24 and Node 26 (coverage, CLI contract, demo scenarios, gated fixture step),
+  Playwright gated suite plus the JUnit-verified demonstration. Artifacts: `bte-report-node24`,
+  `bte-report-node26`, `playwright-report`.
 - Package publishing is not configured (all packages are `private`-adjacent workspace packages with
   `files: dist`); publishing needs an explicit decision and approval.
 - No SBOM, signing, or provenance; add when publishing is decided.
