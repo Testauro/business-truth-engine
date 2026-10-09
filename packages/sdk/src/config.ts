@@ -134,12 +134,17 @@ export interface LoadConfigOptions {
   dotenv?: string | false | undefined;
 }
 
+export interface RawConfig {
+  raw: unknown;
+  file: string;
+  dir: string;
+}
+
 /**
- * Load, interpolate and validate a config file. TypeScript configs are imported
- * natively (Node >= 24 strips types); JSON is parsed; both go through the same
- * `${ENV}` interpolation and schema.
+ * Read a config file without interpolating environment variables or validating it.
+ * Used by tooling that must not need secrets (e.g. `bte rules validate` only needs `rules`).
  */
-export async function loadBteConfig(options: LoadConfigOptions = {}): Promise<LoadedConfig> {
+export async function loadRawBteConfig(options: LoadConfigOptions = {}): Promise<RawConfig> {
   const cwd = path.resolve(options.cwd ?? process.cwd());
   const file =
     options.file === undefined ? await findConfigFile(cwd) : path.resolve(cwd, options.file);
@@ -149,15 +154,6 @@ export async function loadBteConfig(options: LoadConfigOptions = {}): Promise<Lo
     );
   }
   if (!(await exists(file))) throw new ConfigError(`configuration file not found: ${file}`);
-  const dotenvFile =
-    options.dotenv === false
-      ? undefined
-      : (options.dotenv ?? path.join(path.dirname(file), '.env'));
-  const env =
-    dotenvFile === undefined
-      ? { ...(options.env ?? process.env) }
-      : await loadDotEnv(dotenvFile, options.env ?? process.env);
-
   let raw: unknown;
   if (file.endsWith('.json')) {
     const { readFile } = await import('node:fs/promises');
@@ -178,12 +174,43 @@ export async function loadBteConfig(options: LoadConfigOptions = {}): Promise<Lo
       );
     }
     raw = module['default'] ?? module['config'];
-    if (raw === undefined)
+    if (raw === undefined) {
       throw new ConfigError(
         `${file}: export the configuration as default (e.g. \`export default defineConfig({...})\`)`,
       );
+    }
   }
+  return { raw, file, dir: path.dirname(file) };
+}
+
+/** The `rules` targets of a config, resolved against its directory, without touching sources or secrets. */
+export async function loadRuleTargets(options: LoadConfigOptions = {}): Promise<string[]> {
+  const { raw, file, dir } = await loadRawBteConfig(options);
+  const rules = (raw as { rules?: unknown } | null)?.rules;
+  if (
+    !Array.isArray(rules) ||
+    rules.length === 0 ||
+    !rules.every((r) => typeof r === 'string' && r.trim() !== '')
+  ) {
+    throw new ConfigError(`${file}: "rules" must be a non-empty array of paths`);
+  }
+  return rules.map((r) => path.resolve(dir, r));
+}
+
+/**
+ * Load, interpolate and validate a config file. TypeScript configs are imported
+ * natively (Node >= 24 strips types); JSON is parsed; both go through the same
+ * `${ENV}` interpolation and schema.
+ */
+export async function loadBteConfig(options: LoadConfigOptions = {}): Promise<LoadedConfig> {
+  const { raw, file, dir } = await loadRawBteConfig(options);
+  const dotenvFile =
+    options.dotenv === false ? undefined : (options.dotenv ?? path.join(dir, '.env'));
+  const env =
+    dotenvFile === undefined
+      ? { ...(options.env ?? process.env) }
+      : await loadDotEnv(dotenvFile, options.env ?? process.env);
   const interpolated = interpolateEnv(raw, env);
   const config = validateConfig(interpolated, file);
-  return { config, file, dir: path.dirname(file), env };
+  return { config, file, dir, env };
 }
