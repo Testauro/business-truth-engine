@@ -196,7 +196,7 @@ pnpm 10.34.6 via npx, Chromium headless shell 1248):
 Remaining before a public release:
 
 - ~~GitHub Actions has never run~~ **Resolved 2026-10-09.** Pushed to
-  https://github.com/Testauro/business-truth-engine (private). Run 37887740270 failed in the
+  https://github.com/Testauro/business-truth-engine (made public 2026-10-09). Run 37887740270 failed in the
   quality job because type-aware lint ran before `dist/` existed (198 unsafe-type errors); fixed in
   `713c04f` by building first. Run 37887873081 then passed all four jobs in 1.6 minutes: quality,
   test on Node 24 and Node 26 (coverage, CLI contract, demo scenarios, gated fixture step),
