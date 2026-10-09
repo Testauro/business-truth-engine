@@ -1,0 +1,155 @@
+{
+  "$comment": "Fixture catalogue consumed by apps/cli/test/fixtures.test.ts. Each case is evaluated with rules/invoice-created-once.yaml at the given instant.",
+  "rule": "rules/invoice-created-once.yaml",
+  "cases": [
+    {
+      "name": "normal",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_1001\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+      ]
+    },
+    {
+      "name": "missing-invoice",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "FAIL",
+          "reasons": ["MISSING_EXPECTED_OUTCOME"]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-invoice",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_1001\"", "verdict": "FAIL", "reasons": ["DUPLICATE_OUTCOME"] }
+      ]
+    },
+    {
+      "name": "wrong-amount",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_1001\"", "verdict": "FAIL", "reasons": ["ASSERTION_MISMATCH"] }
+      ]
+    },
+    {
+      "name": "wrong-currency",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_1001\"", "verdict": "FAIL", "reasons": ["ASSERTION_MISMATCH"] }
+      ]
+    },
+    {
+      "name": "not-yet-due",
+      "now": "2026-01-15T10:01:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_1001\"", "verdict": "PENDING", "reasons": ["WINDOW_OPEN"] }
+      ]
+    },
+    {
+      "name": "not-yet-due-one-observed",
+      "now": "2026-01-15T10:01:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_1001\"", "verdict": "PENDING", "reasons": ["WINDOW_OPEN"] }
+      ]
+    },
+    {
+      "name": "unavailable-source",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "UNKNOWN",
+          "reasons": ["SOURCE_UNAVAILABLE"]
+        }
+      ]
+    },
+    {
+      "name": "no-attestation",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "UNKNOWN",
+          "reasons": ["SOURCE_STATUS_MISSING"]
+        }
+      ]
+    },
+    {
+      "name": "no-watermark",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "UNKNOWN",
+          "reasons": ["NO_COMPLETENESS_ATTESTATION"]
+        }
+      ]
+    },
+    {
+      "name": "non-authoritative",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "UNKNOWN",
+          "reasons": ["SOURCE_NOT_AUTHORITATIVE"]
+        }
+      ]
+    },
+    {
+      "name": "source-lagging",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "PENDING",
+          "reasons": ["SOURCE_INCOMPLETE"]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-delivery",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "PASS",
+          "reasons": ["REDELIVERY_DEDUPLICATED", "OUTCOME_CONFIRMED"]
+        }
+      ]
+    },
+    {
+      "name": "out-of-order",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_1001\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+      ]
+    },
+    {
+      "name": "late-invoice",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "FAIL",
+          "reasons": ["LATE_OUTCOME", "MISSING_EXPECTED_OUTCOME"]
+        }
+      ]
+    },
+    {
+      "name": "mixed-orders",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "FAIL",
+          "reasons": ["MISSING_EXPECTED_OUTCOME"]
+        },
+        { "correlationValue": "\"ord_2002\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+      ]
+    }
+  ]
+}

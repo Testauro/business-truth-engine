@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@bte/core": ["./packages/core/src/index.ts"],
+      "@bte/rules": ["./packages/rules/src/index.ts"],
+      "@bte/evidence": ["./packages/evidence/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/test/**/*.ts",
+    "apps/*/test/**/*.ts",
+    "vitest.config.ts",
+    "eslint.config.js"
+  ]
+}

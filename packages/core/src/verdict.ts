@@ -1,0 +1,116 @@
+/**
+ * Verdict vocabulary.
+ *
+ *  PASS    - authoritative, complete evidence shows the invariant held.
+ *  FAIL    - authoritative evidence shows the invariant was violated
+ *            (missing after the deadline with complete data, duplicate,
+ *            mismatched value, or late).
+ *  PENDING - the obligation is not yet resolvable: the window is still open,
+ *            or a healthy authoritative source has not yet caught up.
+ *  UNKNOWN - evidence is missing, unavailable, non-authoritative, conflicting
+ *            or has no completeness attestation. A verdict cannot be given
+ *            honestly. UNKNOWN is never silently upgraded to PASS.
+ */
+export const VERDICTS = ['PASS', 'FAIL', 'PENDING', 'UNKNOWN'] as const;
+export type Verdict = (typeof VERDICTS)[number];
+
+/** Precedence when combining expectation verdicts into a rule verdict. */
+const PRECEDENCE: Readonly<Record<Verdict, number>> = {
+  FAIL: 3,
+  UNKNOWN: 2,
+  PENDING: 1,
+  PASS: 0,
+};
+
+export function combineVerdicts(verdicts: readonly Verdict[]): Verdict {
+  if (verdicts.length === 0) return 'UNKNOWN';
+  let worst: Verdict = 'PASS';
+  for (const verdict of verdicts) {
+    if (PRECEDENCE[verdict] > PRECEDENCE[worst]) worst = verdict;
+  }
+  return worst;
+}
+
+export const REASON_CODES = [
+  'OUTCOME_CONFIRMED',
+  'MISSING_EXPECTED_OUTCOME',
+  'DUPLICATE_OUTCOME',
+  'UNEXPECTED_OUTCOME',
+  'ASSERTION_MISMATCH',
+  'LATE_OUTCOME',
+  'EARLY_OUTCOME',
+  'WINDOW_OPEN',
+  'SOURCE_STATUS_MISSING',
+  'SOURCE_UNAVAILABLE',
+  'SOURCE_NOT_AUTHORITATIVE',
+  'SOURCE_INCOMPLETE',
+  'NO_COMPLETENESS_ATTESTATION',
+  'CONFLICTING_REDELIVERY',
+  'REDELIVERY_DEDUPLICATED',
+  'CORRELATION_VALUE_MISSING',
+] as const;
+export type ReasonCode = (typeof REASON_CODES)[number];
+
+export interface Reason {
+  code: ReasonCode;
+  message: string;
+  /** Evidence event ids (and source attestation keys) that support this reason. */
+  evidenceIds: readonly string[];
+}
+
+export interface ObservationSummary {
+  eventId: string;
+  type: string;
+  source: string;
+  occurredAt: string;
+  collectedAt: string;
+  /** Value of `distinctBy` (or the event id). */
+  distinctKey: string;
+  /** Number of deliveries collapsed into this observation. */
+  deliveries: number;
+  placement: 'in-window' | 'early' | 'late';
+}
+
+export interface SourceAssessment {
+  source: string;
+  trusted: boolean;
+  status: 'available' | 'unavailable' | 'missing';
+  authoritative: boolean | null;
+  completeThrough: string | null;
+  /** True when `completeThrough >= deadline`. */
+  completeThroughDeadline: boolean;
+  observedAt: string | null;
+}
+
+export interface ExpectationVerdict {
+  expectationId: string;
+  type: string;
+  verdict: Verdict;
+  deadline: string;
+  windowStart: string;
+  cardinality: { min: number; max: number | null };
+  distinctInWindow: number;
+  observations: readonly ObservationSummary[];
+  source: SourceAssessment;
+  reasons: readonly Reason[];
+}
+
+export interface RuleVerdict {
+  ruleId: string;
+  ruleVersion: number;
+  verdict: Verdict;
+  /** Correlation key path and value (e.g. orderId = "ord_123"). */
+  correlationKey: string;
+  correlationValue: string;
+  trigger: {
+    eventId: string;
+    type: string;
+    occurredAt: string;
+    collectedAt: string;
+    deliveries: number;
+  };
+  evaluatedAt: string;
+  expectations: readonly ExpectationVerdict[];
+  /** Flattened, ordered reasons across expectations. */
+  reasons: readonly Reason[];
+}

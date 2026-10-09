@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, evaluate fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm format:check
+      - run: pnpm test
+        env:
+          CI: 'true'
+      - name: Evaluate fixtures with the built CLI (expect FAIL exit code on seeded defect)
+        run: |
+          node apps/cli/dist/main.js validate --rules rules
+          node apps/cli/dist/main.js evaluate --rules rules --evidence examples/fixtures/normal.ndjson --now 2026-01-15T10:03:00Z --format json --output bte-report/normal.json
+          if node apps/cli/dist/main.js evaluate --rules rules --evidence examples/fixtures/duplicate-invoice.ndjson --now 2026-01-15T10:03:00Z --format json --output bte-report/duplicate-invoice.json; then
+            echo "expected a FAIL exit code for the duplicate-invoice fixture" >&2; exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bte-report
+          path: bte-report/
+          if-no-files-found: ignore

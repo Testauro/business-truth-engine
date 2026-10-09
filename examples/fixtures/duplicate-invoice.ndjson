@@ -1,0 +1,6 @@
+# duplicate-invoice: two distinct invoices for one order
+{"kind":"source","source":"orders","observedAt":"2026-01-15T10:03:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-01-15T10:03:00.000Z"}
+{"kind":"event","eventId":"evt-order-1001-paid","type":"order.paid","source":"orders","occurredAt":"2026-01-15T10:00:00.000Z","collectedAt":"2026-01-15T10:00:00.250Z","deliveryId":"d-1","payload":{"orderId":"ord_1001","paymentId":"pay_7001","amount":49.99,"currency":"USD","customerId":"cus_42"}}
+{"kind":"event","eventId":"evt-inv-5001-created","type":"invoice.created","source":"invoicing","occurredAt":"2026-01-15T10:00:05.000Z","collectedAt":"2026-01-15T10:00:05.300Z","deliveryId":"d-2","payload":{"invoiceId":"inv_5001","orderId":"ord_1001","amount":49.99,"currency":"USD"}}
+{"kind":"event","eventId":"evt-inv-5002-created","type":"invoice.created","source":"invoicing","occurredAt":"2026-01-15T10:00:07.000Z","collectedAt":"2026-01-15T10:00:07.100Z","deliveryId":"d-3","payload":{"invoiceId":"inv_5002","orderId":"ord_1001","amount":49.99,"currency":"USD"}}
+{"kind":"source","source":"invoicing","observedAt":"2026-01-15T10:03:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-01-15T10:03:00.000Z","note":"invoice table scanned"}

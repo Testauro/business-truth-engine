@@ -1,0 +1,37 @@
+# Business invariant: every paid order produces exactly one correct invoice.
+#
+# Verdict semantics (see docs/adr/0002-verdict-semantics.md):
+#   PASS    exactly one invoice.created within 120s, amount/currency/orderId match,
+#           and the invoicing source is authoritative and complete past the deadline.
+#   FAIL    duplicate invoice, mismatched values, or confirmed missing/late invoice.
+#   PENDING deadline not reached, or the healthy source has not caught up yet.
+#   UNKNOWN invoicing source unavailable / non-authoritative / no attestation.
+id: invoice-created-once
+version: 1
+description: A paid order must produce exactly one invoice with the paid amount and currency.
+trigger:
+  type: order.paid
+  correlationKey: orderId
+expectations:
+  - id: invoice
+    type: invoice.created
+    source: invoicing
+    correlationKey: orderId
+    distinctBy: invoiceId
+    window:
+      within: 120s
+      before: 5s
+    cardinality: exactly-one
+    assertions:
+      - field: orderId
+        op: equals
+        expected: { trigger: orderId }
+        description: invoice belongs to the paid order
+      - field: amount
+        op: equals
+        expected: { trigger: amount }
+        description: invoice amount equals the paid amount
+      - field: currency
+        op: equals
+        expected: { trigger: currency }
+        description: invoice currency equals the payment currency

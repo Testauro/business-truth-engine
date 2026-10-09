@@ -1,0 +1,4 @@
+# missing-invoice: order paid, invoicing complete past deadline, no invoice
+{"kind":"source","source":"orders","observedAt":"2026-01-15T10:03:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-01-15T10:03:00.000Z"}
+{"kind":"event","eventId":"evt-order-1001-paid","type":"order.paid","source":"orders","occurredAt":"2026-01-15T10:00:00.000Z","collectedAt":"2026-01-15T10:00:00.250Z","deliveryId":"d-1","payload":{"orderId":"ord_1001","paymentId":"pay_7001","amount":49.99,"currency":"USD","customerId":"cus_42"}}
+{"kind":"source","source":"invoicing","observedAt":"2026-01-15T10:03:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-01-15T10:03:00.000Z","note":"invoice table scanned"}

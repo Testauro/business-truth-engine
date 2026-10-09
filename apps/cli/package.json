@@ -1,0 +1,34 @@
+{
+  "name": "@bte/cli",
+  "version": "0.1.0",
+  "description": "Business Truth Engine command line: evaluate business invariants against NDJSON evidence.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "bte": "./dist/main.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --root ../.. apps/cli"
+  },
+  "dependencies": {
+    "@bte/core": "workspace:*",
+    "@bte/evidence": "workspace:*",
+    "@bte/rules": "workspace:*",
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "zod": "^4.6.5"
+  }
+}

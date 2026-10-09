@@ -1,0 +1,150 @@
+import { z } from 'zod';
+import { isDuration } from '../duration.js';
+
+/**
+ * Rule contracts: "Business Invariants as Code".
+ *
+ * A rule is triggered by an event type. For each trigger event, every
+ * expectation is checked: within a time window after the trigger, a given
+ * number of distinct observations of another event type must exist for the
+ * same correlation key, and each observation must satisfy the assertions.
+ */
+
+const nonEmpty = z.string().trim().min(1);
+const identifier = z
+  .string()
+  .regex(/^[a-z0-9]+(?:[-.][a-z0-9]+)*$/, 'must be lower-case kebab/dot case');
+const durationString = z.string().refine(isDuration, 'must be a duration like 120s, 2m, 500ms');
+const payloadPath = nonEmpty.regex(/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$/, 'must be a dotted path');
+
+export const CardinalitySchema = z.union([
+  z.literal('exactly-one'),
+  z.literal('at-least-one'),
+  z.literal('none'),
+  z
+    .object({
+      min: z.number().int().min(0),
+      max: z.number().int().min(0).optional(),
+    })
+    .strict()
+    .refine((c) => c.max === undefined || c.max >= c.min, 'max must be >= min')
+    .refine(
+      (c) => !(c.min === 0 && c.max === undefined),
+      'min 0 with no max can never fail; a rule must be falsifiable',
+    ),
+]);
+
+export type Cardinality = z.infer<typeof CardinalitySchema>;
+
+export const LiteralSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+export type Literal = z.infer<typeof LiteralSchema>;
+
+export const AssertionOperatorSchema = z.enum(['equals', 'notEquals', 'gt', 'gte', 'lt', 'lte']);
+export type AssertionOperator = z.infer<typeof AssertionOperatorSchema>;
+
+export const ExpectedValueSchema = z.union([
+  z.object({ trigger: payloadPath }).strict(),
+  z.object({ value: LiteralSchema }).strict(),
+]);
+export type ExpectedValue = z.infer<typeof ExpectedValueSchema>;
+
+export const AssertionSchema = z
+  .object({
+    /** Path into the observation payload. */
+    field: payloadPath,
+    op: AssertionOperatorSchema,
+    expected: ExpectedValueSchema,
+    description: z.string().optional(),
+  })
+  .strict();
+export type Assertion = z.infer<typeof AssertionSchema>;
+
+export const ExpectationSchema = z
+  .object({
+    /** Stable id for the expectation inside the rule; defaults to `type`. */
+    id: identifier.optional(),
+    /** Event type that must be observed. */
+    type: nonEmpty,
+    /** Source that is authoritative for this observation. Events from other sources are ignored. */
+    source: nonEmpty,
+    /** Path in the observation payload holding the correlation value. Defaults to the trigger's. */
+    correlationKey: payloadPath.optional(),
+    /**
+     * Path identifying a distinct business outcome (e.g. `invoiceId`).
+     * Two observations with different values are two outcomes. Defaults to the
+     * event id, so distinct event ids are distinct outcomes.
+     */
+    distinctBy: payloadPath.optional(),
+    window: z
+      .object({
+        /** Deadline relative to the trigger's `occurredAt`. */
+        within: durationString,
+        /** Tolerance for observations whose `occurredAt` precedes the trigger (clock skew). */
+        before: durationString.optional(),
+      })
+      .strict(),
+    cardinality: CardinalitySchema,
+    assertions: z.array(AssertionSchema).default([]),
+  })
+  .strict();
+export type Expectation = z.infer<typeof ExpectationSchema>;
+
+export const RuleSchema = z
+  .object({
+    id: identifier,
+    version: z.number().int().min(1),
+    description: z.string().optional(),
+    trigger: z
+      .object({
+        type: nonEmpty,
+        /** Path in the trigger payload holding the business correlation value. */
+        correlationKey: payloadPath,
+      })
+      .strict(),
+    expectations: z.array(ExpectationSchema).min(1),
+  })
+  .strict()
+  .superRefine((rule, ctx) => {
+    const seen = new Set<string>();
+    rule.expectations.forEach((expectation, index) => {
+      const id = expectation.id ?? expectation.type;
+      if (seen.has(id)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['expectations', index, 'id'],
+          message: `duplicate expectation id "${id}"`,
+        });
+      }
+      seen.add(id);
+    });
+  });
+
+export type Rule = z.infer<typeof RuleSchema>;
+export type RuleInput = z.input<typeof RuleSchema>;
+
+export function parseRule(input: unknown): Rule {
+  return RuleSchema.parse(input);
+}
+
+export interface ResolvedCardinality {
+  min: number;
+  /** `Number.POSITIVE_INFINITY` when unbounded. */
+  max: number;
+}
+
+export function resolveCardinality(cardinality: Cardinality): ResolvedCardinality {
+  switch (cardinality) {
+    case 'exactly-one':
+      return { min: 1, max: 1 };
+    case 'at-least-one':
+      return { min: 1, max: Number.POSITIVE_INFINITY };
+    case 'none':
+      return { min: 0, max: 0 };
+    default:
+      return { min: cardinality.min, max: cardinality.max ?? Number.POSITIVE_INFINITY };
+  }
+}
+
+export function expectationId(expectation: Expectation): string {
+  return expectation.id ?? expectation.type;
+}

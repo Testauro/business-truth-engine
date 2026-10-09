@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+bte-report
+test-results
+playwright-report
+pnpm-lock.yaml
+*.ndjson
