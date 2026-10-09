@@ -25,9 +25,36 @@ const CatalogueSchema = z.object({
   ),
 });
 
-const catalogue = CatalogueSchema.parse(
-  JSON.parse(await readFile(path.join(fixturesDir, 'cases.json'), 'utf8')),
+const CATALOGUES = ['examples/fixtures/cases.json', 'examples/fixtures/aggregates/cases.json'];
+const catalogues = await Promise.all(
+  CATALOGUES.map(async (file) => ({
+    file,
+    dir: path.dirname(path.join(repoRoot, file)),
+    catalogue: CatalogueSchema.parse(JSON.parse(await readFile(path.join(repoRoot, file), 'utf8'))),
+  })),
 );
+const primary = catalogues[0];
+if (primary === undefined) throw new Error('no catalogues');
+const catalogue = primary.catalogue;
+
+describe.each(catalogues.map((c) => [c.file, c] as const))('catalogue %s', (_file, entry) => {
+  it.each(entry.catalogue.cases.map((c) => [c.name, c] as const))('%s', async (_name, testCase) => {
+    const result = await runEvaluate({
+      rules: [path.join(repoRoot, entry.catalogue.rule)],
+      evidence: [path.join(entry.dir, `${testCase.name}.ndjson`)],
+      now: testCase.now,
+      format: 'json',
+      failOn: 'fail',
+    });
+    const actual = result.report.verdicts.map((v) => ({
+      correlationValue: v.correlationValue,
+      verdict: v.verdict,
+      reasons: v.reasons.map((r) => r.code),
+    }));
+    expect(actual).toEqual(testCase.expected);
+    expect(result.exitCode).toBe(testCase.expected.some((e) => e.verdict === 'FAIL') ? 1 : 0);
+  });
+});
 
 describe('fixture catalogue', () => {
   it('covers every verdict', () => {

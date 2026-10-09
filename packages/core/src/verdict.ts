@@ -37,6 +37,7 @@ export const REASON_CODES = [
   'DUPLICATE_OUTCOME',
   'UNEXPECTED_OUTCOME',
   'ASSERTION_MISMATCH',
+  'AGGREGATE_MISMATCH',
   'LATE_OUTCOME',
   'EARLY_OUTCOME',
   'WINDOW_OPEN',
@@ -85,6 +86,17 @@ export interface SourceAssessment {
   observedAt: string | null;
 }
 
+export interface AggregateSummary {
+  fn: string;
+  field: string | null;
+  op: string;
+  /** Computed value, or null when it could not be computed (empty set for min/max/avg, non-numeric field). */
+  value: number | null;
+  expected: unknown;
+  status: 'pass' | 'fail' | 'indeterminate' | 'not-evaluated';
+  message: string;
+}
+
 export interface ExpectationVerdict {
   expectationId: string;
   type: string;
@@ -94,6 +106,8 @@ export interface ExpectationVerdict {
   cardinality: { min: number; max: number | null };
   distinctInWindow: number;
   observations: readonly ObservationSummary[];
+  /** One entry per declared aggregate, in rule order. */
+  aggregates: readonly AggregateSummary[];
   source: SourceAssessment;
   reasons: readonly Reason[];
 }

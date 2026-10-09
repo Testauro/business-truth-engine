@@ -1,0 +1,31 @@
+# Example of aggregate assertions: refunds for a paid order may be many, but together they must
+# never exceed what was paid, and each must be in the payment currency.
+id: refunds-within-payment
+version: 1
+description: Refunds issued for a paid order never exceed the amount paid.
+trigger:
+  type: order.paid
+  source: orders
+  correlationKey: orderId
+expectations:
+  - id: refunds
+    type: refund.issued
+    source: payments
+    correlationKey: orderId
+    distinctBy: refundId
+    window:
+      within: 30d
+    cardinality: { min: 0, max: 20 }
+    assertions:
+      - field: currency
+        op: equals
+        expected: { trigger: currency }
+    aggregates:
+      - fn: sum
+        field: amount
+        op: lte
+        expected: { trigger: amount }
+        description: total refunded never exceeds the payment
+      - fn: count
+        op: lte
+        expected: { value: 20 }

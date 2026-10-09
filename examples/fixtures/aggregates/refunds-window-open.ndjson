@@ -1,0 +1,5 @@
+# evaluated mid-window: the running sum already exceeds nothing, but the set is not complete
+{"kind":"source","source":"orders","observedAt":"2026-02-15T00:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-02-15T00:00:00.000Z"}
+{"kind":"event","eventId":"evt-order-3001-paid","type":"order.paid","source":"orders","occurredAt":"2026-02-01T09:00:00.000Z","collectedAt":"2026-02-01T09:00:00.100Z","payload":{"orderId":"ord_3001","paymentId":"pay_9001","amount":80.00,"currency":"USD"}}
+{"kind":"event","eventId":"evt-ref-1","type":"refund.issued","source":"payments","occurredAt":"2026-02-03T12:00:00.000Z","collectedAt":"2026-02-03T12:00:01.000Z","payload":{"refundId":"ref_1","orderId":"ord_3001","amount":30.00,"currency":"USD"}}
+{"kind":"source","source":"payments","observedAt":"2026-02-15T00:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-02-15T00:00:00.000Z"}

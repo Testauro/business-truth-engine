@@ -49,6 +49,7 @@ system boundaries from evidence, independently of whether the UI test passed.
 ## Later
 
 - ~~PostgreSQL evidence store~~ done (ADR 0004): `@bte/evidence-postgres`, `bte ingest`, `--postgres`, as-of replay.
-- Additional rule operators (regex, set membership, sums across observations).
+- ~~Sums across observations~~ done: aggregate assertions (`sum`/`min`/`max`/`avg`/`count`/`distinctCount`).
+- Additional rule operators (regex, set membership).
 - Multi-trigger correlation (e.g. refunds) and cross-rule dependencies.
 - AI-assisted rule drafting — explicitly out of scope until deterministic verification is complete.

@@ -32,16 +32,19 @@ Per expectation, evaluated at an injected instant `now`, with `deadline = trigge
    `PENDING` / `UNKNOWN` degradation as (4). If `max` is unbounded, an authoritative
    observation is enough: `PASS` immediately.
 
-6. **Trigger trust.** When a rule declares `trigger.source`, only trigger events from that source
-   are evaluated, and the source must be attested available and authoritative. Otherwise the rule
-   verdict is `UNKNOWN` regardless of the expectations (which are still evaluated and reported):
-   every value taken from the trigger (amounts, currency, even the fact that payment happened) is
-   suspect, so neither PASS nor FAIL can be honest. Without `trigger.source` the trigger is taken
-   at face value; the reference rule declares `source: orders`.
-7. **A source cannot vouch for the future.** `completeThrough` is clamped to the attestation's
-   `observedAt`; a watermark beyond it is a collector bug and is reported as
-   `watermarkClamped: true` in the source assessment. Without this clamp an attestation taken
-   before the deadline could "prove" absence after it.
+5b. **Aggregates** (`sum`, `min`, `max`, `avg`, `count`, `distinctCount` over the distinct
+in-window outcomes) are evaluated only once the set is complete: window closed and
+`completeThrough >= deadline`, even for unbounded cardinality. Before that the expectation stays
+PENDING / UNKNOWN as in (4) and (5); a partial sum is never a verdict. A violated aggregate is
+`FAIL` (`AGGREGATE_MISMATCH`); a missing trigger operand is `UNKNOWN`. 6. **Trigger trust.** When a rule declares `trigger.source`, only trigger events from that source
+are evaluated, and the source must be attested available and authoritative. Otherwise the rule
+verdict is `UNKNOWN` regardless of the expectations (which are still evaluated and reported):
+every value taken from the trigger (amounts, currency, even the fact that payment happened) is
+suspect, so neither PASS nor FAIL can be honest. Without `trigger.source` the trigger is taken
+at face value; the reference rule declares `source: orders`. 7. **A source cannot vouch for the future.** `completeThrough` is clamped to the attestation's
+`observedAt`; a watermark beyond it is a collector bug and is reported as
+`watermarkClamped: true` in the source assessment. Without this clamp an attestation taken
+before the deadline could "prove" absence after it.
 
 Rule verdict = worst expectation verdict with precedence FAIL > UNKNOWN > PENDING > PASS, then
 forced to UNKNOWN by an untrusted trigger source.

@@ -10,6 +10,8 @@ export {
 } from './contracts/evidence.js';
 export type { EvidenceEvent, EvidenceRecord, SourceStatus } from './contracts/evidence.js';
 export {
+  AggregateFnSchema,
+  AggregateSchema,
   AssertionOperatorSchema,
   AssertionSchema,
   CardinalitySchema,
@@ -22,6 +24,8 @@ export {
   resolveCardinality,
 } from './contracts/rule.js';
 export type {
+  Aggregate,
+  AggregateFn,
   Assertion,
   AssertionOperator,
   Cardinality,
@@ -37,9 +41,11 @@ export type { DedupedEvent } from './evidence-set.js';
 export { evaluateRule, evaluateRules, evaluateTrigger } from './evaluate/evaluate.js';
 export type { EvaluateOptions } from './evaluate/evaluate.js';
 export { evaluateAssertion } from './evaluate/assertions.js';
+export { evaluateAggregate } from './evaluate/aggregates.js';
 export type { AssertionOutcome } from './evaluate/assertions.js';
 export { REASON_CODES, VERDICTS, combineVerdicts } from './verdict.js';
 export type {
+  AggregateSummary,
   ExpectationVerdict,
   ObservationSummary,
   Reason,

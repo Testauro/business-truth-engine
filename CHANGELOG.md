@@ -7,6 +7,13 @@ versions follow SemVer. Unreleased changes sit at the top.
 
 ### Added
 
+- Aggregate assertions on expectations: `aggregates: [{ fn, field, op, expected }]` with `sum`,
+  `min`, `max`, `avg`, `count`, `distinctCount` over the distinct in-window outcomes, evaluated only
+  once the set is complete; new reason code `AGGREGATE_MISMATCH`; computed values reported on the
+  expectation verdict. Example rule `examples/rules/refunds-within-payment.yaml` and a second
+  fixture catalogue `examples/fixtures/aggregates/cases.json`, both checked by the tests and
+  `check:cli`.
+
 - `@bte/evidence-postgres`: append-only PostgreSQL evidence store with idempotent ingest, database
   triggers refusing updates and deletes, re-validation on read, filters by type / source /
   correlation, and `collectedUntil` as-of loading (ADR 0004).

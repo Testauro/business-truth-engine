@@ -257,6 +257,21 @@ CI: pushed as `74978b0`; run 37890400497 green in 1.2 min on all four jobs. Both
 `packages/evidence-postgres/test/store.test.ts` (11 tests) and `apps/cli/test/postgres.test.ts`
 (5 tests) executing against the `postgres:17` service, not skipping.
 
+## Aggregate assertions (ROADMAP "Later"): COMPLETE (2026-10-09)
+
+- Engine: `aggregates` on expectations, evaluated over distinct in-window outcomes only once the set
+  is complete (window closed, source complete through the deadline, also for unbounded
+  cardinality); `AGGREGATE_MISMATCH`; computed values on `ExpectationVerdict.aggregates`.
+- Example rule `examples/rules/refunds-within-payment.yaml`; catalogue
+  `examples/fixtures/aggregates/cases.json` (within, exceed, none, redelivered, window open, no
+  watermark); fixture test and `check:cli` now iterate every catalogue.
+- Verification (actual runs): `pnpm verify` with PostgreSQL green: 25 files, 271 tests
+  (43 new); coverage 97.7% statements / 89.5% branches / 97.8% functions / 98.8% lines; `check:cli`
+  passes both catalogues (refunds within PASS, exceed FAIL, none PASS, redelivered PASS, window
+  open PENDING, no watermark UNKNOWN); scenarios 7/7; E2E 16 passed. CLI on `refunds-exceed`:
+  `AGGREGATE_MISMATCH: refund.issued: sum(amount) is 85.5 over 3 observations, expected lte 80`
+  citing all three refunds and the trigger, exit 1.
+
 ## What's next
 
 ROADMAP "Later": PostgreSQL evidence store, aggregate assertions, multi-trigger correlation,

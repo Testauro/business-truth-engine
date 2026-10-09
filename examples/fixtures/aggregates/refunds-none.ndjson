@@ -1,0 +1,4 @@
+# no refunds at all; sum is 0
+{"kind":"source","source":"orders","observedAt":"2026-03-05T00:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-03-05T00:00:00.000Z"}
+{"kind":"event","eventId":"evt-order-3001-paid","type":"order.paid","source":"orders","occurredAt":"2026-02-01T09:00:00.000Z","collectedAt":"2026-02-01T09:00:00.100Z","payload":{"orderId":"ord_3001","paymentId":"pay_9001","amount":80.00,"currency":"USD"}}
+{"kind":"source","source":"payments","observedAt":"2026-03-05T00:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-03-05T00:00:00.000Z"}

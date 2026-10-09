@@ -30,15 +30,17 @@ $BTE evaluate -r rules -e examples/fixtures/mixed-orders.ndjson --now 2026-01-15
 $BTE evaluate -r rules -e examples/fixtures/mixed-orders.ndjson --now 2026-01-15T10:03:00Z -f json > "$OUT/repro-2.json" || true
 if cmp -s "$OUT/repro-1.json" "$OUT/repro-2.json"; then echo "ok   reproducible JSON"; else echo "FAIL JSON differs between runs" >&2; status=1; fi
 
-# Every catalogued fixture yields its expected verdict (same source of truth as the unit tests).
+# Every catalogued fixture (both catalogues) yields its expected verdict (same source of truth as the unit tests).
 node -e '
-const fs=require("fs"),{execFileSync}=require("child_process");
-const cat=JSON.parse(fs.readFileSync("examples/fixtures/cases.json","utf8"));let bad=0;
-for(const c of cat.cases){
-  let out;try{out=execFileSync("node",["apps/cli/dist/main.js","evaluate","-r",cat.rule,"-e",`examples/fixtures/${c.name}.ndjson`,"--now",c.now,"-f","json"],{stdio:["ignore","pipe","ignore"]}).toString()}catch(e){out=e.stdout.toString()}
-  const r=JSON.parse(out);const got=r.verdicts.map(v=>({correlationValue:v.correlationValue,verdict:v.verdict,reasons:v.reasons.map(x=>x.code)}));
-  const ok=JSON.stringify(got)===JSON.stringify(c.expected);if(!ok)bad++;
-  console.log((ok?"ok   ":"FAIL ")+c.name.padEnd(26)+got.map(g=>g.verdict).join(","));
+const fs=require("fs"),path=require("path"),{execFileSync}=require("child_process");let bad=0;
+for(const file of ["examples/fixtures/cases.json","examples/fixtures/aggregates/cases.json"]){
+  const cat=JSON.parse(fs.readFileSync(file,"utf8"));const dir=path.dirname(file);
+  for(const c of cat.cases){
+    let out;try{out=execFileSync("node",["apps/cli/dist/main.js","evaluate","-r",cat.rule,"-e",path.join(dir,c.name+".ndjson"),"--now",c.now,"-f","json"],{stdio:["ignore","pipe","ignore"]}).toString()}catch(e){out=e.stdout.toString()}
+    const r=JSON.parse(out);const got=r.verdicts.map(v=>({correlationValue:v.correlationValue,verdict:v.verdict,reasons:v.reasons.map(x=>x.code)}));
+    const ok=JSON.stringify(got)===JSON.stringify(c.expected);if(!ok)bad++;
+    console.log((ok?"ok   ":"FAIL ")+c.name.padEnd(26)+got.map(g=>g.verdict).join(","));
+  }
 }
 process.exit(bad?1:0)' || status=1
 

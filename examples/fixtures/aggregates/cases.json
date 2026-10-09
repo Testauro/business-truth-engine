@@ -1,0 +1,52 @@
+{
+  "$comment": "Aggregate-assertion catalogue; evaluated with examples/rules/refunds-within-payment.yaml (30d window from 2026-02-01T09:00Z, i.e. deadline 2026-03-03T09:00Z).",
+  "rule": "examples/rules/refunds-within-payment.yaml",
+  "cases": [
+    {
+      "name": "refunds-within",
+      "now": "2026-03-05T00:00:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_3001\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+      ]
+    },
+    {
+      "name": "refunds-exceed",
+      "now": "2026-03-05T00:00:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_3001\"", "verdict": "FAIL", "reasons": ["AGGREGATE_MISMATCH"] }
+      ]
+    },
+    {
+      "name": "refunds-none",
+      "now": "2026-03-05T00:00:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_3001\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+      ]
+    },
+    {
+      "name": "refunds-redelivered",
+      "now": "2026-03-05T00:00:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_3001\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+      ]
+    },
+    {
+      "name": "refunds-window-open",
+      "now": "2026-02-15T00:00:00Z",
+      "expected": [
+        { "correlationValue": "\"ord_3001\"", "verdict": "PENDING", "reasons": ["WINDOW_OPEN"] }
+      ]
+    },
+    {
+      "name": "refunds-no-watermark",
+      "now": "2026-03-05T00:00:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_3001\"",
+          "verdict": "UNKNOWN",
+          "reasons": ["NO_COMPLETENESS_ATTESTATION"]
+        }
+      ]
+    }
+  ]
+}

@@ -59,6 +59,30 @@ export const AssertionSchema = z
   .strict();
 export type Assertion = z.infer<typeof AssertionSchema>;
 
+export const AggregateFnSchema = z.enum(['sum', 'min', 'max', 'avg', 'count', 'distinctCount']);
+export type AggregateFn = z.infer<typeof AggregateFnSchema>;
+
+/**
+ * An assertion over all in-window observations of an expectation (one per
+ * distinct outcome), e.g. "sum(amount) <= trigger.amount". Evaluated only
+ * once the observation set is complete (window closed, source complete).
+ */
+export const AggregateSchema = z
+  .object({
+    fn: AggregateFnSchema,
+    /** Path into the observation payload; not used by `count`. */
+    field: payloadPath.optional(),
+    op: AssertionOperatorSchema,
+    expected: ExpectedValueSchema,
+    description: z.string().optional(),
+  })
+  .strict()
+  .refine((a) => a.fn === 'count' || a.field !== undefined, {
+    message: 'field is required for every aggregate except count',
+    path: ['field'],
+  });
+export type Aggregate = z.infer<typeof AggregateSchema>;
+
 export const ExpectationSchema = z
   .object({
     /** Stable id for the expectation inside the rule; defaults to `type`. */
@@ -85,6 +109,8 @@ export const ExpectationSchema = z
       .strict(),
     cardinality: CardinalitySchema,
     assertions: z.array(AssertionSchema).default([]),
+    /** Assertions over the whole in-window observation set; see docs/rules.md. */
+    aggregates: z.array(AggregateSchema).default([]),
   })
   .strict();
 export type Expectation = z.infer<typeof ExpectationSchema>;

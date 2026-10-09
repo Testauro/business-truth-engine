@@ -36,6 +36,7 @@ const verdict: RuleVerdict = {
       cardinality: { min: 1, max: 1 },
       distinctInWindow: 0,
       observations: [],
+      aggregates: [],
       source: {
         source: 'invoicing',
         trusted: true,

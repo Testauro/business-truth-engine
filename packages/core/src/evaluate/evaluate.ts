@@ -7,6 +7,7 @@ import { parseDuration } from '../duration.js';
 import type { DedupedEvent, EvidenceSet } from '../evidence-set.js';
 import { getPath, jsonEquals, stableKey } from '../path.js';
 import type {
+  AggregateSummary,
   ExpectationVerdict,
   ObservationSummary,
   Reason,
@@ -15,6 +16,7 @@ import type {
   Verdict,
 } from '../verdict.js';
 import { combineVerdicts } from '../verdict.js';
+import { evaluateAggregate } from './aggregates.js';
 import { evaluateAssertion } from './assertions.js';
 
 export interface EvaluateOptions {
@@ -139,7 +141,14 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
       message: `trigger ${trigger.canonical.eventId} has no value at "${rule.trigger.correlationKey}"; cannot correlate`,
       evidenceIds: [trigger.canonical.eventId],
     });
-    return { ...base, verdict: 'UNKNOWN', distinctInWindow: 0, observations: [], reasons };
+    return {
+      ...base,
+      verdict: 'UNKNOWN',
+      distinctInWindow: 0,
+      observations: [],
+      aggregates: notEvaluated(expectation),
+      reasons,
+    };
   }
 
   const observationKey = expectation.correlationKey ?? rule.trigger.correlationKey;
@@ -199,11 +208,13 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
   const distinctInWindow = distinct.size;
   const inWindowIds = inWindow.map((event) => event.canonical.eventId);
 
+  let aggregates: AggregateSummary[] = notEvaluated(expectation);
   const finish = (verdict: Verdict): ExpectationVerdict => ({
     ...base,
     verdict,
     distinctInWindow,
     observations,
+    aggregates,
     reasons,
   });
 
@@ -318,8 +329,9 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
   }
 
   // 4. Cardinality within bounds. If more arrivals could still break the
-  //    upper bound, PASS needs a closed window and a complete source.
-  if (Number.isFinite(max)) {
+  //    upper bound, or an aggregate depends on the whole set, PASS needs a
+  //    closed window and a complete source.
+  if (Number.isFinite(max) || expectation.aggregates.length > 0) {
     if (windowOpen) {
       reasons.push({
         code: 'WINDOW_OPEN',
@@ -341,12 +353,59 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
       );
     }
   }
+  // 5. Aggregates over the complete set of distinct outcomes.
+  if (expectation.aggregates.length > 0) {
+    const representatives = [...distinct.values()].map((bucket) => {
+      const [first] = bucket;
+      if (first === undefined) throw new Error('unreachable: empty distinct bucket');
+      return first.canonical.payload;
+    });
+    aggregates = expectation.aggregates.map((aggregate) =>
+      evaluateAggregate(aggregate, representatives, trigger.canonical.payload),
+    );
+    let aggregateFailed = false;
+    let aggregateIndeterminate = false;
+    for (const summary of aggregates) {
+      if (summary.status === 'fail') {
+        aggregateFailed = true;
+        reasons.push({
+          code: 'AGGREGATE_MISMATCH',
+          message: `${expectation.type}: ${summary.message}`,
+          evidenceIds: [...inWindowIds, trigger.canonical.eventId],
+        });
+      } else if (summary.status === 'indeterminate') {
+        aggregateIndeterminate = true;
+        reasons.push({
+          code: 'CORRELATION_VALUE_MISSING',
+          message: `${expectation.type}: ${summary.message}`,
+          evidenceIds: [trigger.canonical.eventId],
+        });
+      }
+    }
+    if (aggregateFailed) return finish('FAIL');
+    if (aggregateIndeterminate) return finish('UNKNOWN');
+  }
   reasons.push({
     code: 'OUTCOME_CONFIRMED',
-    message: `${plural(distinctInWindow, `distinct ${expectation.type} outcome`)} observed within ${expectation.window.within} (bounds ${min}..${Number.isFinite(max) ? max : '∞'}); ${expectation.assertions.length === 0 ? 'no assertions' : plural(expectation.assertions.length, 'assertion') + ' satisfied'}; source "${expectation.source}" authoritative${source.completeThrough === null ? '' : `, complete through ${source.completeThrough}`}`,
+    message: `${plural(distinctInWindow, `distinct ${expectation.type} outcome`)} observed within ${expectation.window.within} (bounds ${min}..${Number.isFinite(max) ? max : '∞'}); ${expectation.assertions.length === 0 ? 'no assertions' : plural(expectation.assertions.length, 'assertion') + ' satisfied'}${expectation.aggregates.length === 0 ? '' : `; ${plural(expectation.aggregates.length, 'aggregate')} satisfied`}; source "${expectation.source}" authoritative${source.completeThrough === null ? '' : `, complete through ${source.completeThrough}`}`,
     evidenceIds: [...sourceIds, trigger.canonical.eventId, ...inWindowIds],
   });
   return finish('PASS');
+}
+
+function notEvaluated(expectation: Expectation): AggregateSummary[] {
+  return expectation.aggregates.map((aggregate) => ({
+    fn: aggregate.fn,
+    field: aggregate.field ?? null,
+    op: aggregate.op,
+    value: null,
+    expected:
+      'trigger' in aggregate.expected
+        ? `trigger.${aggregate.expected.trigger}`
+        : aggregate.expected.value,
+    status: 'not-evaluated',
+    message: 'not evaluated: the observation set is not yet complete',
+  }));
 }
 
 function finishIncomplete(

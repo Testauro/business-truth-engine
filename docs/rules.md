@@ -29,6 +29,29 @@ expectations: # one or more; all must hold
 
 Rules that can never fail (`{ min: 0 }` with no `max`) are rejected.
 
+## Aggregate assertions
+
+Per-observation `assertions` judge each outcome on its own. `aggregates` judge the whole set of
+distinct in-window outcomes at once:
+
+```yaml
+cardinality: { min: 0, max: 20 }
+aggregates:
+  - fn: sum # sum | min | max | avg | count | distinctCount
+    field: amount # payload path; omitted for count
+    op: lte
+    expected: { trigger: amount } # or { value: <number> }
+```
+
+Semantics (ADR 0002, rule 5): an aggregate is evaluated only when the set is knowable, that is
+once the window has closed and the source is complete through the deadline; until then the
+expectation is PENDING or UNKNOWN exactly as for bounded cardinality, even if a running sum already
+looks wrong. A failed aggregate is `AGGREGATE_MISMATCH` (FAIL) citing every observation and the
+trigger; a missing trigger operand is UNKNOWN. Redeliveries and `distinctBy` duplicates are
+aggregated once. `sum` over no observations is 0; `min` / `max` / `avg` over none fail. The
+computed values are reported on the expectation (`aggregates[]`). Worked example:
+`examples/rules/refunds-within-payment.yaml` with its catalogue in `examples/fixtures/aggregates/`.
+
 ## Evidence it needs
 
 ```jsonl
