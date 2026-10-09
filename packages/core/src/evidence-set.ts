@@ -60,6 +60,32 @@ function sameBusinessContent(a: EvidenceEvent, b: EvidenceEvent): boolean {
 }
 
 /**
+ * Which of two attestations for the same source wins. Later `observedAt`
+ * wins. On a tie the more conservative one wins: unavailable over available,
+ * non-authoritative over authoritative, no watermark over any watermark,
+ * an earlier watermark over a later one, then a content key so the choice is
+ * total. Returns > 0 when `candidate` should replace `current`.
+ */
+function attestationOrder(candidate: SourceStatus, current: SourceStatus): number {
+  const byObserved = toEpochMillis(candidate.observedAt) - toEpochMillis(current.observedAt);
+  if (byObserved !== 0) return byObserved;
+  const conservative = (status: SourceStatus): number =>
+    (status.status === 'unavailable' ? 4 : 0) +
+    (status.authoritative ? 0 : 2) +
+    (status.completeThrough === undefined ? 1 : 0);
+  const byConservative = conservative(candidate) - conservative(current);
+  if (byConservative !== 0) return byConservative;
+  if (candidate.completeThrough !== undefined && current.completeThrough !== undefined) {
+    const byWatermark =
+      toEpochMillis(current.completeThrough) - toEpochMillis(candidate.completeThrough);
+    if (byWatermark !== 0) return byWatermark;
+  }
+  const ka = stableKey(candidate);
+  const kb = stableKey(current);
+  return ka < kb ? 1 : ka > kb ? -1 : 0;
+}
+
+/**
  * Immutable, order-independent view over a batch of evidence records.
  * Construction is deterministic: whatever order records arrive in, the same
  * set yields the same deduplicated events and the same latest source status.
@@ -97,14 +123,7 @@ export class EvidenceSet {
         deliveries.set(record.eventId, bucket);
       } else {
         const existing = sources.get(record.source);
-        if (
-          existing === undefined ||
-          toEpochMillis(record.observedAt) > toEpochMillis(existing.observedAt) ||
-          (toEpochMillis(record.observedAt) === toEpochMillis(existing.observedAt) &&
-            // Deterministic tie-break: prefer the more conservative attestation.
-            !record.authoritative &&
-            existing.authoritative)
-        ) {
+        if (existing === undefined || attestationOrder(record, existing) > 0) {
           sources.set(record.source, record);
         }
       }

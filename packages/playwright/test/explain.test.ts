@@ -16,6 +16,16 @@ const verdict: RuleVerdict = {
     deliveries: 1,
   },
   evaluatedAt: '2026-01-15T10:03:00.000Z',
+  triggerSource: {
+    source: 'orders',
+    trusted: true,
+    status: 'available',
+    authoritative: true,
+    completeThrough: '2026-01-15T10:03:00.000Z',
+    watermarkClamped: false,
+    completeThroughDeadline: true,
+    observedAt: '2026-01-15T10:03:00.000Z',
+  },
   expectations: [
     {
       expectationId: 'invoice',
@@ -32,6 +42,7 @@ const verdict: RuleVerdict = {
         status: 'available',
         authoritative: true,
         completeThrough: '2026-01-15T10:03:00.000Z',
+        watermarkClamped: false,
         completeThroughDeadline: true,
         observedAt: '2026-01-15T10:03:00.000Z',
       },
@@ -52,6 +63,9 @@ describe('explainVerdict', () => {
     const text = explainVerdict(verdict);
     expect(text).toContain('BTE FAIL: rule invoice-created-once@v1 for orderId="ord_0001"');
     expect(text).toContain('trigger order.paid order.paid:ord_0001:pay_0001');
+    expect(text).toContain(
+      'trigger source orders: trusted (available, authoritative, complete through 2026-01-15T10:03:00.000Z)',
+    );
     expect(text).toContain('expectation "invoice" (invoice.created): FAIL; 0 distinct in window');
     expect(text).toContain(
       'source invoicing (available, authoritative, complete through 2026-01-15T10:03:00.000Z)',

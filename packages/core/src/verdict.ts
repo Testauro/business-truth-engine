@@ -76,7 +76,10 @@ export interface SourceAssessment {
   trusted: boolean;
   status: 'available' | 'unavailable' | 'missing';
   authoritative: boolean | null;
+  /** Effective watermark: never later than `observedAt` (a source cannot vouch for the future). */
   completeThrough: string | null;
+  /** True when the attested watermark exceeded `observedAt` and was clamped. */
+  watermarkClamped: boolean;
   /** True when `completeThrough >= deadline`. */
   completeThroughDeadline: boolean;
   observedAt: string | null;
@@ -110,6 +113,8 @@ export interface RuleVerdict {
     deliveries: number;
   };
   evaluatedAt: string;
+  /** Assessment of the trigger's own source when the rule declares `trigger.source`. */
+  triggerSource: SourceAssessment | null;
   expectations: readonly ExpectationVerdict[];
   /** Flattened, ordered reasons across expectations. */
   reasons: readonly Reason[];

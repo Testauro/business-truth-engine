@@ -97,6 +97,12 @@ export const RuleSchema = z
     trigger: z
       .object({
         type: nonEmpty,
+        /**
+         * Source that is authoritative for the trigger. When set, only trigger events from this
+         * source are evaluated and the source must be attested available and authoritative;
+         * otherwise the verdict is UNKNOWN, because every value taken from the trigger is suspect.
+         */
+        source: nonEmpty.optional(),
         /** Path in the trigger payload holding the business correlation value. */
         correlationKey: payloadPath,
       })

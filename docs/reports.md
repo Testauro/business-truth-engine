@@ -47,7 +47,9 @@ PASS. `--now` should always be passed in CI so reports are reproducible.
 }
 ```
 
-`verdicts[].reasons[]` is the audit trail: `{ code, message, evidenceIds }`. Codes are stable
+`verdicts[].triggerSource` is the trigger's source assessment when the rule declares
+`trigger.source` (else `null`); every source assessment carries `watermarkClamped`, true when the
+attested `completeThrough` exceeded `observedAt` and was clamped. `verdicts[].reasons[]` is the audit trail: `{ code, message, evidenceIds }`. Codes are stable
 (`packages/core/src/verdict.ts`, `REASON_CODES`). `evidence[]` makes the report self-contained:
 every cited id resolves to the event (type, source, `occurredAt`, `collectedAt`, delivery count) or
 the source attestation (`observedAt`, status, authoritative, `completeThrough`).

@@ -6,7 +6,11 @@
       "name": "normal",
       "now": "2026-01-15T10:03:00Z",
       "expected": [
-        { "correlationValue": "\"ord_1001\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "PASS",
+          "reasons": ["OUTCOME_CONFIRMED"]
+        }
       ]
     },
     {
@@ -24,35 +28,55 @@
       "name": "duplicate-invoice",
       "now": "2026-01-15T10:03:00Z",
       "expected": [
-        { "correlationValue": "\"ord_1001\"", "verdict": "FAIL", "reasons": ["DUPLICATE_OUTCOME"] }
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "FAIL",
+          "reasons": ["DUPLICATE_OUTCOME"]
+        }
       ]
     },
     {
       "name": "wrong-amount",
       "now": "2026-01-15T10:03:00Z",
       "expected": [
-        { "correlationValue": "\"ord_1001\"", "verdict": "FAIL", "reasons": ["ASSERTION_MISMATCH"] }
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "FAIL",
+          "reasons": ["ASSERTION_MISMATCH"]
+        }
       ]
     },
     {
       "name": "wrong-currency",
       "now": "2026-01-15T10:03:00Z",
       "expected": [
-        { "correlationValue": "\"ord_1001\"", "verdict": "FAIL", "reasons": ["ASSERTION_MISMATCH"] }
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "FAIL",
+          "reasons": ["ASSERTION_MISMATCH"]
+        }
       ]
     },
     {
       "name": "not-yet-due",
       "now": "2026-01-15T10:01:00Z",
       "expected": [
-        { "correlationValue": "\"ord_1001\"", "verdict": "PENDING", "reasons": ["WINDOW_OPEN"] }
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "PENDING",
+          "reasons": ["WINDOW_OPEN"]
+        }
       ]
     },
     {
       "name": "not-yet-due-one-observed",
       "now": "2026-01-15T10:01:00Z",
       "expected": [
-        { "correlationValue": "\"ord_1001\"", "verdict": "PENDING", "reasons": ["WINDOW_OPEN"] }
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "PENDING",
+          "reasons": ["WINDOW_OPEN"]
+        }
       ]
     },
     {
@@ -125,7 +149,11 @@
       "name": "out-of-order",
       "now": "2026-01-15T10:03:00Z",
       "expected": [
-        { "correlationValue": "\"ord_1001\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "PASS",
+          "reasons": ["OUTCOME_CONFIRMED"]
+        }
       ]
     },
     {
@@ -148,8 +176,28 @@
           "verdict": "FAIL",
           "reasons": ["MISSING_EXPECTED_OUTCOME"]
         },
-        { "correlationValue": "\"ord_2002\"", "verdict": "PASS", "reasons": ["OUTCOME_CONFIRMED"] }
+        {
+          "correlationValue": "\"ord_2002\"",
+          "verdict": "PASS",
+          "reasons": ["OUTCOME_CONFIRMED"]
+        }
       ]
+    },
+    {
+      "name": "untrusted-trigger-source",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "UNKNOWN",
+          "reasons": ["SOURCE_UNAVAILABLE", "OUTCOME_CONFIRMED"]
+        }
+      ]
+    },
+    {
+      "name": "no-trigger",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": []
     }
   ]
 }

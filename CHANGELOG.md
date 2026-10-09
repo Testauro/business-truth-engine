@@ -3,6 +3,23 @@
 All notable changes to this project are documented here. The format follows Keep a Changelog;
 versions follow SemVer. Unreleased changes sit at the top.
 
+## [Unreleased]
+
+### Fixed (independent SDET review, 2026-10-09)
+
+- Attestation selection could depend on evidence order when two attestations for one source shared
+  an `observedAt`; selection is now total and conservative.
+- A source attestation could claim completeness beyond its own `observedAt`, turning a pre-deadline
+  snapshot into a false FAIL after the deadline; watermarks are clamped (`watermarkClamped`).
+- Two CLI tests claimed to cover the no-trigger path but did not; a `no-trigger` fixture now does.
+- Playwright CI retries disabled: the suite is deterministic and a flake must fail loudly.
+
+### Added
+
+- `trigger.source` in rules: trigger events from other sources are ignored and an untrusted trigger
+  source forces UNKNOWN; `RuleVerdict.triggerSource` reports the assessment. The reference rule
+  declares `source: orders`. New fixtures `untrusted-trigger-source` and `no-trigger`.
+
 ## [0.1.0] - 2026-10-09
 
 First release candidate: the deterministic engine, CLI, demo and Playwright integration.

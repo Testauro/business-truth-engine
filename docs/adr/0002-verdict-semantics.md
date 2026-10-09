@@ -32,15 +32,32 @@ Per expectation, evaluated at an injected instant `now`, with `deadline = trigge
    `PENDING` / `UNKNOWN` degradation as (4). If `max` is unbounded, an authoritative
    observation is enough: `PASS` immediately.
 
-Rule verdict = worst expectation verdict with precedence FAIL > UNKNOWN > PENDING > PASS.
+6. **Trigger trust.** When a rule declares `trigger.source`, only trigger events from that source
+   are evaluated, and the source must be attested available and authoritative. Otherwise the rule
+   verdict is `UNKNOWN` regardless of the expectations (which are still evaluated and reported):
+   every value taken from the trigger (amounts, currency, even the fact that payment happened) is
+   suspect, so neither PASS nor FAIL can be honest. Without `trigger.source` the trigger is taken
+   at face value; the reference rule declares `source: orders`.
+7. **A source cannot vouch for the future.** `completeThrough` is clamped to the attestation's
+   `observedAt`; a watermark beyond it is a collector bug and is reported as
+   `watermarkClamped: true` in the source assessment. Without this clamp an attestation taken
+   before the deadline could "prove" absence after it.
+
+Rule verdict = worst expectation verdict with precedence FAIL > UNKNOWN > PENDING > PASS, then
+forced to UNKNOWN by an untrusted trigger source.
 A rule with no expectations, or an empty verdict set, is `UNKNOWN`, never `PASS`.
 
 Time: `occurredAt` places observations as `early` (< trigger - before), `in-window`
 (inclusive of the deadline), or `late` (> deadline). `collectedAt` never affects placement;
 it only orders redeliveries. `now == deadline` closes the window.
 
-Identity: deliveries with the same `eventId` are one event (earliest collection is canonical).
-Distinct outcomes are counted by `distinctBy` when set, else by `eventId`.
+Identity: deliveries with the same `eventId` are one event (earliest collection is canonical;
+ties break on delivery id, then a content key, so the choice is total). Distinct outcomes are
+counted by `distinctBy` when set, else by `eventId`.
+
+Attestations: the latest `observedAt` per source wins. On an exact tie the more conservative one
+wins (unavailable over available, non-authoritative over authoritative, no watermark over any,
+earlier watermark over later, then a content key), so evidence order can never flip a verdict.
 
 ## Consequences
 

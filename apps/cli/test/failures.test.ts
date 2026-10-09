@@ -101,20 +101,34 @@ describe('CLI failure scenarios', () => {
     expect(unknownCommand.code).toBe(2);
   });
 
-  it('evidence with no trigger events: exit 0, zero verdicts, markdown says nothing was evaluated', async () => {
-    const dir = path.join(repoRoot, 'examples', 'fixtures');
+  it('evidence with no trigger events: exit 0, zero verdicts, never PASS', async () => {
     const { code, out } = await invoke([
       'evaluate',
       '-r',
       rules,
       '-e',
-      path.join(dir, 'invalid', 'README.md'),
+      fixture('no-trigger'),
       '--now',
       '2026-01-15T10:03:00Z',
       '-f',
-      'markdown',
+      'json',
     ]);
-    // README.md lines are not JSON, so this must fail as evidence, not pass silently.
+    expect(code).toBe(0);
+    const report = JSON.parse(out) as { verdicts: unknown[]; summary: Record<string, number> };
+    expect(report.verdicts).toEqual([]);
+    expect(report.summary).toEqual({ PASS: 0, FAIL: 0, PENDING: 0, UNKNOWN: 0 });
+  });
+
+  it('non-evidence text passed as evidence: exit 2, never silently empty', async () => {
+    const { code, out } = await invoke([
+      'evaluate',
+      '-r',
+      rules,
+      '-e',
+      path.join(repoRoot, 'examples', 'fixtures', 'invalid', 'README.md'),
+      '--now',
+      '2026-01-15T10:03:00Z',
+    ]);
     expect(code).toBe(2);
     expect(out).toBe('');
   });

@@ -9,6 +9,7 @@ version: 1 # bump when semantics change; id@version must be unique
 description: optional prose
 trigger:
   type: order.paid # event type that starts an obligation
+  source: orders # optional; when set, the trigger's source must be attested trusted or the verdict is UNKNOWN
   correlationKey: orderId # dotted path into the trigger payload
 expectations: # one or more; all must hold
   - id: invoice # optional, defaults to `type`
@@ -39,8 +40,9 @@ Rules that can never fail (`{ min: 0 }` with no `max`) are rejected.
 - `occurredAt` is business time and drives windows. `collectedAt` is when BTE got the record.
 - Redeliveries share `eventId` (optionally different `deliveryId`) and are counted once.
 - `source` attestations are what let BTE say PASS or FAIL. Without one for the expectation's
-  source, the verdict is UNKNOWN. `completeThrough` must reach the deadline before an absence
-  (or "exactly one") can be confirmed.
+  source (or the trigger's, when `trigger.source` is set), the verdict is UNKNOWN.
+  `completeThrough` must reach the deadline before an absence (or "exactly one") can be
+  confirmed, and it is never taken to be later than the attestation's own `observedAt`.
 
 ## Reading a verdict
 

@@ -33,11 +33,18 @@ function assessSource(status: SourceStatus | undefined, deadline: number): Sourc
       status: 'missing',
       authoritative: null,
       completeThrough: null,
+      watermarkClamped: false,
       completeThroughDeadline: false,
       observedAt: null,
     };
   }
-  const completeThrough = status.completeThrough ?? null;
+  // A source can only vouch for what it had seen when it was observed.
+  const observedAt = toEpochMillis(status.observedAt);
+  const attested =
+    status.completeThrough === undefined ? null : toEpochMillis(status.completeThrough);
+  const watermarkClamped = attested !== null && attested > observedAt;
+  const effective = attested === null ? null : Math.min(attested, observedAt);
+  const completeThrough = effective === null ? null : toIso(effective);
   const trusted = status.status === 'available' && status.authoritative;
   return {
     source: status.source,
@@ -45,9 +52,36 @@ function assessSource(status: SourceStatus | undefined, deadline: number): Sourc
     status: status.status,
     authoritative: status.authoritative,
     completeThrough,
-    completeThroughDeadline:
-      trusted && completeThrough !== null && toEpochMillis(completeThrough) >= deadline,
+    watermarkClamped,
+    completeThroughDeadline: trusted && effective !== null && effective >= deadline,
     observedAt: status.observedAt,
+  };
+}
+
+function untrustedReason(
+  source: SourceAssessment,
+  sourceIds: readonly string[],
+  subject: string,
+  detail: string,
+): Reason {
+  if (source.status === 'missing') {
+    return {
+      code: 'SOURCE_STATUS_MISSING',
+      message: `no attestation for ${subject} source "${source.source}"; ${detail}`,
+      evidenceIds: [...sourceIds],
+    };
+  }
+  if (source.status === 'unavailable') {
+    return {
+      code: 'SOURCE_UNAVAILABLE',
+      message: `${subject} source "${source.source}" was unavailable at ${source.observedAt ?? '?'}; ${detail}`,
+      evidenceIds: [...sourceIds],
+    };
+  }
+  return {
+    code: 'SOURCE_NOT_AUTHORITATIVE',
+    message: `${subject} source "${source.source}" is not authoritative; ${detail}`,
+    evidenceIds: [...sourceIds],
   };
 }
 
@@ -180,25 +214,7 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
       candidates.length === 0
         ? 'no matching observations were collected'
         : `${plural(candidates.length, 'matching observation')} collected but cannot be trusted`;
-    if (source.status === 'missing') {
-      reasons.push({
-        code: 'SOURCE_STATUS_MISSING',
-        message: `no attestation for source "${expectation.source}"; ${seen}`,
-        evidenceIds: inWindowIds,
-      });
-    } else if (source.status === 'unavailable') {
-      reasons.push({
-        code: 'SOURCE_UNAVAILABLE',
-        message: `source "${expectation.source}" was unavailable at ${source.observedAt ?? '?'}; ${seen}`,
-        evidenceIds: [...sourceIds, ...inWindowIds],
-      });
-    } else {
-      reasons.push({
-        code: 'SOURCE_NOT_AUTHORITATIVE',
-        message: `source "${expectation.source}" is not authoritative; ${seen}`,
-        evidenceIds: [...sourceIds, ...inWindowIds],
-      });
-    }
+    reasons.push(untrustedReason(source, [...sourceIds, ...inWindowIds], 'expectation', seen));
     if (now < deadline) {
       reasons.push({
         code: 'WINDOW_OPEN',
@@ -354,7 +370,7 @@ function finishIncomplete(
   }
   reasons.push({
     code: 'SOURCE_INCOMPLETE',
-    message: `source "${expectation.source}" is complete only through ${source.completeThrough}, before the deadline ${toIso(deadline)}; ${observed} of ${min} required ${expectation.type} observed so far`,
+    message: `source "${expectation.source}" is complete only through ${source.completeThrough}${source.watermarkClamped ? ' (watermark clamped to the attestation instant)' : ''}, before the deadline ${toIso(deadline)}; ${observed} of ${min} required ${expectation.type} observed so far`,
     evidenceIds: [...sourceIds],
   });
   return finish('PENDING');
@@ -372,12 +388,36 @@ export function evaluateTrigger(
       `event ${trigger.canonical.eventId} has type "${trigger.canonical.type}" but rule ${rule.id} triggers on "${rule.trigger.type}"`,
     );
   }
+  if (rule.trigger.source !== undefined && trigger.canonical.source !== rule.trigger.source) {
+    throw new TypeError(
+      `event ${trigger.canonical.eventId} comes from source "${trigger.canonical.source}" but rule ${rule.id} triggers on source "${rule.trigger.source}"`,
+    );
+  }
   const now = options.clock.now();
   const expectations = rule.expectations.map((expectation) =>
     evaluateExpectation({ rule, expectation, trigger, evidence, now }),
   );
   const correlationValue = getPath(trigger.canonical.payload, rule.trigger.correlationKey);
   const reasons: Reason[] = [];
+  let triggerSource: SourceAssessment | null = null;
+  let triggerTrusted = true;
+  if (rule.trigger.source !== undefined) {
+    const rawStatus = evidence.sourceStatus(rule.trigger.source);
+    triggerSource = { ...assessSource(rawStatus, now), source: rule.trigger.source };
+    if (!triggerSource.trusted) {
+      triggerTrusted = false;
+      reasons.push(
+        untrustedReason(
+          triggerSource,
+          rawStatus === undefined
+            ? [trigger.canonical.eventId]
+            : [sourceEvidenceId(rawStatus), trigger.canonical.eventId],
+          'trigger',
+          `the ${rule.trigger.type} trigger and its values cannot be trusted, so no PASS or FAIL can be given`,
+        ),
+      );
+    }
+  }
   if (trigger.deliveries.length > 1) {
     reasons.push({
       code: 'REDELIVERY_DEDUPLICATED',
@@ -393,9 +433,11 @@ export function evaluateTrigger(
     });
   }
   const verdicts = expectations.map((e) => e.verdict);
-  const verdict = trigger.conflicting
+  let verdict = trigger.conflicting
     ? combineVerdicts([...verdicts, 'UNKNOWN'])
     : combineVerdicts(verdicts);
+  // An untrusted trigger poisons every conclusion drawn from its values.
+  if (!triggerTrusted) verdict = 'UNKNOWN';
   return {
     ruleId: rule.id,
     ruleVersion: rule.version,
@@ -410,6 +452,7 @@ export function evaluateTrigger(
       deliveries: trigger.deliveries.length,
     },
     evaluatedAt: toIso(now),
+    triggerSource,
     expectations,
     reasons: [...reasons, ...expectations.flatMap((e) => e.reasons)],
   };
@@ -423,6 +466,10 @@ export function evaluateRule(
 ): RuleVerdict[] {
   return evidence
     .eventsOfType(rule.trigger.type)
+    .filter(
+      (trigger) =>
+        rule.trigger.source === undefined || trigger.canonical.source === rule.trigger.source,
+    )
     .map((trigger) => evaluateTrigger(rule, trigger, evidence, options));
 }
 

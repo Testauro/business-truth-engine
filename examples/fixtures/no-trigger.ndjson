@@ -1,0 +1,4 @@
+# no-trigger: an invoice and healthy sources, but no order.paid at all; nothing to evaluate
+{"kind":"source","source":"orders","observedAt":"2026-01-15T10:03:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-01-15T10:03:00.000Z"}
+{"kind":"event","eventId":"evt-inv-5001-created","type":"invoice.created","source":"invoicing","occurredAt":"2026-01-15T10:00:05.000Z","collectedAt":"2026-01-15T10:00:05.300Z","deliveryId":"d-2","payload":{"invoiceId":"inv_5001","orderId":"ord_1001","amount":49.99,"currency":"USD"}}
+{"kind":"source","source":"invoicing","observedAt":"2026-01-15T10:03:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-01-15T10:03:00.000Z","note":"invoice table scanned"}

@@ -10,7 +10,8 @@ export default defineConfig({
   testDir: './specs',
   fullyParallel: true,
   forbidOnly: Boolean(process.env['CI']),
-  retries: process.env['CI'] ? 1 : 0,
+  // Every test is deterministic (manual clock, per-worker server); a flake must fail loudly, not retry.
+  retries: 0,
   ...(process.env['CI'] ? { workers: 2 } : {}),
   timeout: 30_000,
   expect: { timeout: 5_000 },

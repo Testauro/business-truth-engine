@@ -206,6 +206,31 @@ Remaining before a public release:
   `files: dist`); publishing needs an explicit decision and approval.
 - No SBOM, signing, or provenance; add when publishing is decided.
 
+## Independent SDET review (2026-10-09): findings and outcomes
+
+Method: executed the gates for a baseline (green at `3eb3b60`), read the engine, CLI, demo and
+Playwright code adversarially, wrote reproduction tests for each suspected defect, confirmed all of
+them failed, fixed within scope, reran everything. No push.
+
+| Sev    | Finding                                                                                                                                                                                                       | Location                                                | Status                                                                                                        |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| High   | False FAIL: an attestation observed before the deadline could claim `completeThrough` past it; absence was then "proven" by a source that had not seen the window close                                       | `packages/core/src/evaluate/evaluate.ts` `assessSource` | Fixed: watermark clamped to `observedAt`, `watermarkClamped` reported; regression test                        |
+| High   | Missing rule: no way to require trust in the trigger's source; an `order.paid` from an unavailable or cached orders system still produced PASS/FAIL using its amounts                                         | `packages/core/src/contracts/rule.ts`, evaluator        | Fixed: optional `trigger.source`; untrusted trigger forces UNKNOWN; reference rule uses it; fixture + 7 tests |
+| Medium | Nondeterminism: two attestations for one source at the same instant (available vs unavailable) were chosen by input order                                                                                     | `packages/core/src/evidence-set.ts`                     | Fixed: total conservative order; 3 tests                                                                      |
+| Medium | Two CLI tests named for the no-trigger path tested nothing of the kind                                                                                                                                        | `apps/cli/test/report.test.ts`, `failures.test.ts`      | Fixed: `no-trigger` fixture, honest assertions                                                                |
+| Low    | CI retried Playwright once, which can hide flakes in a suite that is deterministic by construction                                                                                                            | `tests/e2e/playwright.config.ts`                        | Fixed: `retries: 0`                                                                                           |
+| Low    | Evidence collected after `--now` is still used (no "as-of" filtering); reproducible replays must pass `--now` equal to the collection instant                                                                 | evaluator / CLI                                         | Open: documented design gap                                                                                   |
+| Low    | A healthy source whose watermark never advances stays PENDING forever; no staleness rule turns it into UNKNOWN                                                                                                | evaluator                                               | Open: candidate `staleAfter` rule field                                                                       |
+| Low    | Demo admin and evidence endpoints have no auth or CSRF protection                                                                                                                                             | `apps/demo/src/http/app.ts`                             | Open by design: demo only, binds 127.0.0.1, documented in SECURITY.md                                         |
+| Low    | Evidence id `source:<name>@<observedAt>` is ambiguous if a source name contains `@`                                                                                                                           | `apps/cli/src/report.ts` `indexEvidence`                | Open: cosmetic                                                                                                |
+| Info   | Playwright assertions reviewed: role/label locators, web-first `expect`, no timeouts/sleeps; `OrderPage.orderId()` reads `textContent` once but only after the heading is visible                             | `tests/e2e/pages/*`                                     | No change                                                                                                     |
+| Info   | Concurrency: the demo is single-process and synchronous; per-worker servers isolate E2E state; `check:*` scripts and `test:e2e` share `bte-report/` and must not run concurrently (CI runs them sequentially) | scripts, CI                                             | No change                                                                                                     |
+
+Verification after fixes (actual runs): build + lint + typecheck + format clean; `pnpm test`
+22 files, 212 tests passed; `check:cli` all ok including the two new fixtures; `check:scenarios`
+7/7 as catalogued; `test:e2e` 16 passed; `check:demonstration` UI passed and BTE failed with
+MISSING_EXPECTED_OUTCOME.
+
 ## What's next
 
 ROADMAP "Later": PostgreSQL evidence store, aggregate assertions, multi-trigger correlation,

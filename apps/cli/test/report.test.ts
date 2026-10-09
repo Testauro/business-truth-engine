@@ -129,8 +129,13 @@ describe('Markdown report', () => {
     expect(md).toContain('| `evt-order-1001-paid` | event order.paid | orders |');
   });
 
-  it('says so when nothing was evaluated', async () => {
-    const md = renderMarkdown(await report('invalid/../normal').then(() => report('normal')));
-    expect(md).toContain('gate passed');
+  it('says so when nothing was evaluated, and JUnit carries zero tests', async () => {
+    const r = await report('no-trigger');
+    expect(r.verdicts).toEqual([]);
+    expect(r.exitCode).toBe(0);
+    expect(renderMarkdown(r)).toContain('_No trigger events found; nothing was evaluated._');
+    expect(renderJunit(r)).toContain(
+      '<testsuites name="bte" tests="0" failures="0" errors="0" skipped="0"',
+    );
   });
 });

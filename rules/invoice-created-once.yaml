@@ -5,12 +5,13 @@
 #           and the invoicing source is authoritative and complete past the deadline.
 #   FAIL    duplicate invoice, mismatched values, or confirmed missing/late invoice.
 #   PENDING deadline not reached, or the healthy source has not caught up yet.
-#   UNKNOWN invoicing source unavailable / non-authoritative / no attestation.
+#   UNKNOWN invoicing (or orders, the trigger's source) unavailable / non-authoritative / no attestation.
 id: invoice-created-once
 version: 1
 description: A paid order must produce exactly one invoice with the paid amount and currency.
 trigger:
   type: order.paid
+  source: orders
   correlationKey: orderId
 expectations:
   - id: invoice
