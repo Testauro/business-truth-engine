@@ -5,6 +5,16 @@ versions follow SemVer. Unreleased changes sit at the top.
 
 ## [Unreleased]
 
+### Added (OrangeHRM consumer)
+
+- `examples/orangehrm`: OrangeHRM verified as an external consumer of the packed BTE packages:
+  adapter delegating to the generic HTTP source (token / session / none auth resolved at collection
+  time), employee-identity and leave rules, page objects, trace-free login setup project, demo
+  (read-only), contract, normalization, offline-replay and private-instance Playwright tests.
+- Core mapping: `{ now: true }` field source for state snapshots; HTTP adapter detects redirects to
+  HTML login pages as authentication failures; source assessments carry the attestation `note`,
+  quoted in `SOURCE_UNAVAILABLE` reasons.
+
 ### Added (reusable product)
 
 - `@bte/sdk`: public entry point with `defineRule`, `defineConfig`, `loadBteConfig`

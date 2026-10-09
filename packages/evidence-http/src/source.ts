@@ -120,6 +120,13 @@ export function createHttpSource(
             response.status,
           );
         }
+        const contentType = response.headers.get('content-type') ?? '';
+        if (response.redirected && !contentType.includes('json')) {
+          throw new HttpSourceError(
+            `${request.method} ${url} was redirected to ${response.url} (${contentType || 'no content type'}); the API likely requires authentication`,
+            response.status,
+          );
+        }
         let body: unknown;
         try {
           body = await response.json();

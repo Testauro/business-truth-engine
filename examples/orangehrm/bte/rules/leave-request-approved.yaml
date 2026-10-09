@@ -1,0 +1,26 @@
+# Private instance only. A leave request submitted (observed in the UI) must become a Scheduled
+# request in OrangeHRM's leave API within the approval SLA, for the same employee, leave type and dates.
+# requestKey = "<empNumber>:<fromDate>:<toDate>" on both sides (OrangeHRM does not expose the request
+# id to the applicant in the UI).
+id: leave-request-approved
+version: 1
+description: A submitted leave request is approved (Scheduled) within 24 hours for the same employee, type and dates.
+trigger:
+  type: leave.request.submitted
+  source: orangehrm-ui
+  correlationKey: requestKey
+expectations:
+  - id: scheduled
+    type: leave.request.scheduled
+    source: orangehrm-leave-api
+    correlationKey: requestKey
+    distinctBy: requestId
+    window:
+      within: 24h
+      before: 5m
+    cardinality: exactly-one
+    assertions:
+      - { field: empNumber, op: equals, expected: { trigger: empNumber } }
+      - { field: leaveTypeId, op: equals, expected: { trigger: leaveTypeId } }
+      - { field: fromDate, op: equals, expected: { trigger: fromDate } }
+      - { field: toDate, op: equals, expected: { trigger: toDate } }

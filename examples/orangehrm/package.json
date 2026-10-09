@@ -1,0 +1,31 @@
+{
+  "name": "orangehrm-bte-consumer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OrangeHRM as an external consumer of the Business Truth Engine: Playwright drives the real UI, a thin adapter maps OrangeHRM's APIs to BTE evidence, BTE judges the business invariants. BTE is installed from packed tarballs only.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "playwright test",
+    "test:offline": "playwright test --project=contract --project=offline",
+    "test:demo": "playwright test --project=setup --project=demo",
+    "test:private": "playwright test --project=setup-private --project=private",
+    "bte:validate": "bte rules validate",
+    "bte:replay": "bte evaluate -r bte/rules -e fixtures/employee-consistent.ndjson --now 2026-06-01T09:05:00Z"
+  },
+  "dependencies": {
+    "@bte/cli": "file:../../dist-packages/bte-cli-0.1.0.tgz",
+    "@bte/core": "file:../../dist-packages/bte-core-0.1.0.tgz",
+    "@bte/evidence": "file:../../dist-packages/bte-evidence-0.1.0.tgz",
+    "@bte/evidence-http": "file:../../dist-packages/bte-evidence-http-0.1.0.tgz",
+    "@bte/evidence-postgres": "file:../../dist-packages/bte-evidence-postgres-0.1.0.tgz",
+    "@bte/playwright": "file:../../dist-packages/bte-playwright-0.1.0.tgz",
+    "@bte/rules": "file:../../dist-packages/bte-rules-0.1.0.tgz",
+    "@bte/sdk": "file:../../dist-packages/bte-sdk-0.1.0.tgz"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^26.6.4",
+    "typescript": "~5.9.3"
+  }
+}

@@ -25,6 +25,7 @@ const verdict: RuleVerdict = {
     watermarkClamped: false,
     completeThroughDeadline: true,
     observedAt: '2026-01-15T10:03:00.000Z',
+    note: null,
   },
   expectations: [
     {
@@ -52,6 +53,7 @@ const verdict: RuleVerdict = {
         watermarkClamped: false,
         completeThroughDeadline: true,
         observedAt: '2026-01-15T10:03:00.000Z',
+        note: null,
       },
       reasons: [],
     },

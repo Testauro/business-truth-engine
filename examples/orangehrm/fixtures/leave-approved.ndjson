@@ -1,0 +1,5 @@
+# SYNTHETIC: submitted at 10:00, Scheduled by 11:30, evaluated the next day
+{"kind":"source","source":"orangehrm-ui","observedAt":"2026-06-01T10:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-06-01T10:00:00.000Z"}
+{"kind":"event","eventId":"ui:leave:7:2026-06-10:2026-06-11","type":"leave.request.submitted","source":"orangehrm-ui","occurredAt":"2026-06-01T10:00:00.000Z","collectedAt":"2026-06-01T10:00:00.000Z","payload":{"requestKey":"7:2026-06-10:2026-06-11","empNumber":7,"leaveTypeId":3,"fromDate":"2026-06-10","toDate":"2026-06-11"}}
+{"kind":"event","eventId":"leave-scheduled:11","type":"leave.request.scheduled","source":"orangehrm-leave-api","occurredAt":"2026-06-01T11:30:00.000Z","collectedAt":"2026-06-01T11:30:00.000Z","payload":{"requestId":11,"requestKey":"7:2026-06-10:2026-06-11","empNumber":7,"leaveTypeId":3,"fromDate":"2026-06-10","toDate":"2026-06-11","lengthDays":2,"entitlementKey":"7:3"}}
+{"kind":"source","source":"orangehrm-leave-api","observedAt":"2026-06-02T10:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-06-02T10:00:00.000Z"}

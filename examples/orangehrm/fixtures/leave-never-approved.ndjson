@@ -1,0 +1,4 @@
+# SYNTHETIC: never scheduled; leave API complete two days later
+{"kind":"source","source":"orangehrm-ui","observedAt":"2026-06-01T10:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-06-01T10:00:00.000Z"}
+{"kind":"event","eventId":"ui:leave:7:2026-06-10:2026-06-11","type":"leave.request.submitted","source":"orangehrm-ui","occurredAt":"2026-06-01T10:00:00.000Z","collectedAt":"2026-06-01T10:00:00.000Z","payload":{"requestKey":"7:2026-06-10:2026-06-11","empNumber":7,"leaveTypeId":3,"fromDate":"2026-06-10","toDate":"2026-06-11"}}
+{"kind":"source","source":"orangehrm-leave-api","observedAt":"2026-06-03T10:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-06-03T10:00:00.000Z"}

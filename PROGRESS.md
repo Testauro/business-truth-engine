@@ -321,6 +321,28 @@ Defects found and fixed while proving portability:
 Not verified here: CI for the consumer job (added to the workflow, not yet pushed); registry
 publication (not configured; approval required).
 
+## OrangeHRM consumer (external application): COMPLETE for the read-only scope (2026-10-09)
+
+| Check                                                    | Result                                                                                                                                                                            |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Consumer install from tarballs, typecheck                | clean; `@bte/*` resolved from `node_modules/@bte/*/dist`                                                                                                                          |
+| Contract + normalization + offline replay (no network)   | 22 Playwright tests passed                                                                                                                                                        |
+| Public demo, read-only, credentials from the environment | 6 passed: session saved (tracing off), login smoke, wrong password rejected, UI assertions, BTE invariant PASS from the session-backed API record, UNKNOWN with no authorized API |
+| Installed CLI                                            | `bte rules validate` ok; `bte evaluate` replays the mismatch fixture with exit 1                                                                                                  |
+| Original demo and engine regression                      | `pnpm verify`: 342 unit tests, scenarios 7/7, E2E 16/16                                                                                                                           |
+
+Generic improvements made for it (not OrangeHRM logic): `{ now: true }` mapping field source,
+auth-redirect detection in the HTTP adapter, attestation note on source assessments.
+
+Blockers recorded, not worked around: no private OrangeHRM instance (leave workflow spec skipped with
+reason; leave rules proven on synthetic fixtures only); Starter API v2 bearer mode implemented and
+stub-tested but not executed against the demo, since registering an OAuth client would modify the
+shared instance.
+
+Defects found and fixed: the installed consumer silently kept stale tarballs when npm resolved them
+through its lockfile (documented: delete `package-lock.json` after repacking); a test mutated
+`process.env` after the adapter had snapshotted it (rebuilt the test with a programmatic source).
+
 ## What's next
 
 ROADMAP "Later": PostgreSQL evidence store, aggregate assertions, multi-trigger correlation,

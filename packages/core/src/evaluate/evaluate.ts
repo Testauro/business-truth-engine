@@ -45,6 +45,7 @@ function assessSource(status: SourceStatus | undefined, deadline: number): Sourc
       watermarkClamped: false,
       completeThroughDeadline: false,
       observedAt: null,
+      note: null,
     };
   }
   // A source can only vouch for what it had seen when it was observed.
@@ -64,6 +65,7 @@ function assessSource(status: SourceStatus | undefined, deadline: number): Sourc
     watermarkClamped,
     completeThroughDeadline: trusted && effective !== null && effective >= deadline,
     observedAt: status.observedAt,
+    note: status.note ?? null,
   };
 }
 
@@ -83,7 +85,7 @@ function untrustedReason(
   if (source.status === 'unavailable') {
     return {
       code: 'SOURCE_UNAVAILABLE',
-      message: `${subject} source "${source.source}" was unavailable at ${source.observedAt ?? '?'}; ${detail}`,
+      message: `${subject} source "${source.source}" was unavailable at ${source.observedAt ?? '?'}${source.note === null ? '' : ` (${source.note})`}; ${detail}`,
       evidenceIds: [...sourceIds],
     };
   }

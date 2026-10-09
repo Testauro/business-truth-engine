@@ -164,3 +164,19 @@ describe('trigger source trust', () => {
     ).toThrow(/expected one verdict, got 0/);
   });
 });
+
+describe('unavailable sources quote their attestation note', () => {
+  it('the SOURCE_UNAVAILABLE reason carries the note so the cause is visible in the verdict', () => {
+    const verdict = single(AFTER_DEADLINE, [
+      orderPaid(),
+      invoicingStatus({
+        status: 'unavailable',
+        completeThrough: undefined,
+        note: 'collect failed: ECONNREFUSED',
+      }),
+    ]);
+    expect(verdict.verdict).toBe('UNKNOWN');
+    expect(verdict.reasons[0]?.message).toContain('(collect failed: ECONNREFUSED)');
+    expect(verdict.expectations[0]?.source.note).toBe('collect failed: ECONNREFUSED');
+  });
+});

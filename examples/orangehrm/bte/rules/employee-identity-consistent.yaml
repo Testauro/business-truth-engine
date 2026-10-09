@@ -1,0 +1,34 @@
+# What the PIM UI showed for an employee must agree with the employee record OrangeHRM's API holds.
+# Trigger: the UI observation recorded by the Playwright test. Expectation: the API record,
+# read independently (token or session), within a short window around the observation.
+# Without authorized API access the expectation's source is unavailable -> UNKNOWN, never PASS.
+id: employee-identity-consistent
+version: 1
+description: The employee shown in PIM matches the authoritative employee record (empNumber, employee id, names).
+trigger:
+  type: employee.observed
+  source: orangehrm-ui
+  correlationKey: empNumber
+expectations:
+  - id: record
+    type: employee.record
+    source: orangehrm-api
+    correlationKey: empNumber
+    distinctBy: empNumber
+    window:
+      within: 10m
+      before: 10m
+    # at-least-one: a matching authoritative record proves the point as soon as it is read;
+    # distinctBy empNumber means there can only ever be one record for the key anyway.
+    cardinality: at-least-one
+    assertions:
+      - field: employeeId
+        op: equals
+        expected: { trigger: employeeId }
+        description: the user-facing Employee Id matches
+      - field: lastName
+        op: equals
+        expected: { trigger: lastName }
+      - field: firstName
+        op: equals
+        expected: { trigger: firstName }

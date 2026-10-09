@@ -1,0 +1,25 @@
+# Private instance only. Once a request is Scheduled, the employee's entitlement for that leave type
+# must record at least that request's length as used. OrangeHRM computes lengthDays from the work
+# week and partial days, so the rule reads the length from the request instead of assuming 1 day.
+id: leave-usage-recorded
+version: 1
+description: After approval, the leave entitlement balance reflects at least the approved request's length.
+trigger:
+  type: leave.request.scheduled
+  source: orangehrm-leave-api
+  correlationKey: entitlementKey
+expectations:
+  - id: entitlement
+    type: leave.entitlement.snapshot
+    source: orangehrm-leave-api
+    correlationKey: entitlementKey
+    distinctBy: entitlementId
+    window:
+      within: 1h
+      before: 1h
+    cardinality: at-least-one
+    assertions:
+      - field: daysUsed
+        op: gte
+        expected: { trigger: lengthDays }
+        description: usage includes the approved request

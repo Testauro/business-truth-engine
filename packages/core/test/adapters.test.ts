@@ -145,6 +145,27 @@ describe('mapItems', () => {
     expect(error.message).toContain('mapping for source "lms" failed on 4 item(s): #0 occurredAt');
   });
 
+  it('{ now: true } stamps a state snapshot with the collection instant', () => {
+    const snapshot = {
+      type: 'employee.record',
+      items: 'data',
+      eventId: { template: 'employee:${empNumber}' },
+      occurredAt: { now: true },
+      payload: { empNumber: 'empNumber', lastName: 'lastName', seenAt: { now: true } },
+    } as const;
+    const result = mapItems(
+      snapshot,
+      { data: { empNumber: 7, lastName: 'Doe' } },
+      { source: 'hr', collectedAt: NOW },
+    );
+    expect(result.problems).toEqual([]);
+    expect(result.events[0]).toMatchObject({
+      eventId: 'employee:7',
+      occurredAt: '2026-01-15T10:03:00.000Z',
+      payload: { empNumber: 7, lastName: 'Doe', seenAt: NOW },
+    });
+  });
+
   it('applies filters, accepts a bare array or a single object, and tolerates a missing items path', () => {
     const single = mapItems(
       { ...mapping, items: undefined, filter: { path: 'course', equals: 'c1' } },

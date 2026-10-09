@@ -205,3 +205,40 @@ describe('createHttpSource', () => {
     ).toThrow();
   });
 });
+
+describe('authentication redirects', () => {
+  it('a redirect to an HTML login page is reported as an auth problem, not parsed as evidence', async () => {
+    const { createServer: mk } = await import('node:http');
+    const srv = mk((req, res) => {
+      if (req.url === '/login') {
+        res.writeHead(200, { 'content-type': 'text/html' });
+        res.end('<html>login</html>');
+        return;
+      }
+      res.writeHead(302, { location: '/login' });
+      res.end();
+    });
+    await new Promise<void>((resolve) => {
+      srv.listen(0, '127.0.0.1', resolve);
+    });
+    const address = srv.address();
+    if (address === null || typeof address === 'string') throw new Error('no address');
+    try {
+      const source = createHttpSource({
+        type: 'http',
+        name: 'hr',
+        baseUrl: `http://127.0.0.1:${address.port}`,
+        requests: [{ url: '/api/x', mapping }],
+      });
+      await expect(source.collect({ now: NOW })).rejects.toThrow(
+        /redirected to .*\/login .*requires authentication/,
+      );
+    } finally {
+      await new Promise<void>((resolve) =>
+        srv.close(() => {
+          resolve();
+        }),
+      );
+    }
+  });
+});

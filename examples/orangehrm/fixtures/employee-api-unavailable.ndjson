@@ -1,0 +1,4 @@
+# SYNTHETIC: no authorized API access; the UI alone cannot prove the backend
+{"kind":"source","source":"orangehrm-ui","observedAt":"2026-06-01T09:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-06-01T09:00:00.000Z","note":"SYNTHETIC fixture"}
+{"kind":"event","eventId":"ui:employee:185","type":"employee.observed","source":"orangehrm-ui","occurredAt":"2026-06-01T09:00:00.000Z","collectedAt":"2026-06-01T09:00:00.000Z","payload":{"empNumber":185,"employeeId":"0386","firstName":"12345","lastName":"Chk113224","middleName":""}}
+{"kind":"source","source":"orangehrm-api","observedAt":"2026-06-01T09:00:05.000Z","status":"unavailable","authoritative":true,"note":"collect failed: no authorized OrangeHRM API access (ORANGEHRM_API_MODE=none)"}

@@ -20,6 +20,8 @@ export const FieldSourceSchema = z.union([
   z.object({ const: z.union([z.string(), z.number(), z.boolean(), z.null()]) }).strict(),
   /** `${...}` placeholders are replaced by item values at those dotted paths. */
   z.object({ template: z.string().min(1) }).strict(),
+  /** The collection instant. For state snapshots that carry no event time (a record "as of now"). */
+  z.object({ now: z.literal(true) }).strict(),
 ]);
 export type FieldSource = z.infer<typeof FieldSourceSchema>;
 
@@ -70,10 +72,11 @@ export class MappingError extends Error {
 }
 
 /** Read a mapped field; `undefined` means "no value", and a template with a missing placeholder is no value. */
-function readField(item: unknown, field: FieldSource): unknown {
+function readField(item: unknown, field: FieldSource, collectedAt: number): unknown {
   if (typeof field === 'string') return getPath(item, field);
   if ('path' in field) return getPath(item, field.path);
   if ('const' in field) return field.const;
+  if ('now' in field) return collectedAt;
   const state = { missing: false };
   const text = field.template.replace(/\$\{([^}]+)\}/g, (_match, inner: string) => {
     const value = getPath(item, inner.trim());
@@ -106,7 +109,7 @@ export function mapItems(
       if (value !== mapping.filter.equals) return;
     }
     const problems: MappingProblem[] = [];
-    const eventId = readField(item, mapping.eventId);
+    const eventId = readField(item, mapping.eventId, context.collectedAt);
     if (typeof eventId !== 'string' && typeof eventId !== 'number') {
       problems.push({
         index,
@@ -114,7 +117,7 @@ export function mapItems(
         message: `expected a string or number, got ${JSON.stringify(eventId)}`,
       });
     }
-    const occurredRaw = readField(item, mapping.occurredAt);
+    const occurredRaw = readField(item, mapping.occurredAt, context.collectedAt);
     let occurredAt: string | undefined;
     try {
       if (typeof occurredRaw !== 'string' && typeof occurredRaw !== 'number')
@@ -128,7 +131,9 @@ export function mapItems(
       });
     }
     const deliveryRaw =
-      mapping.deliveryId === undefined ? undefined : readField(item, mapping.deliveryId);
+      mapping.deliveryId === undefined
+        ? undefined
+        : readField(item, mapping.deliveryId, context.collectedAt);
     if (
       deliveryRaw !== undefined &&
       typeof deliveryRaw !== 'string' &&
@@ -142,7 +147,7 @@ export function mapItems(
     }
     const payload: Record<string, unknown> = {};
     for (const [key, field] of Object.entries(mapping.payload)) {
-      const value = readField(item, field);
+      const value = readField(item, field, context.collectedAt);
       if (value === undefined) {
         problems.push({ index, field: `payload.${key}`, message: 'no value at the mapped path' });
         continue;

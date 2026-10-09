@@ -85,6 +85,8 @@ export interface SourceAssessment {
   /** True when `completeThrough >= deadline`. */
   completeThroughDeadline: boolean;
   observedAt: string | null;
+  /** Free-text note from the attestation (e.g. why a source was unavailable). */
+  note: string | null;
 }
 
 export interface AggregateSummary {

@@ -183,3 +183,44 @@ jobs:
             examples/learning-platform/playwright-report
             examples/learning-platform/bte-report
           if-no-files-found: ignore
+
+  consumer-orangehrm:
+    name: OrangeHRM consumer (contract + offline; demo when secrets are set)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pack:packages
+      - working-directory: examples/orangehrm
+        run: |
+          npm install --no-audit --no-fund
+          npx tsc -p tsconfig.json
+          npx bte rules validate
+      - working-directory: examples/orangehrm
+        run: npx playwright install --with-deps chromium --only-shell
+      - name: Contract and offline projects (no network, no credentials)
+        working-directory: examples/orangehrm
+        run: npx playwright test --project=contract --project=offline
+      - name: Public demo, read-only (only when credentials are configured as secrets)
+        if: ${{ secrets.ORANGEHRM_USERNAME != '' }}
+        working-directory: examples/orangehrm
+        env:
+          ORANGEHRM_USERNAME: ${{ secrets.ORANGEHRM_USERNAME }}
+          ORANGEHRM_PASSWORD: ${{ secrets.ORANGEHRM_PASSWORD }}
+          ORANGEHRM_API_MODE: session
+        run: npx playwright test --project=setup --project=demo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: orangehrm-consumer-report
+          path: examples/orangehrm/playwright-report
+          if-no-files-found: ignore

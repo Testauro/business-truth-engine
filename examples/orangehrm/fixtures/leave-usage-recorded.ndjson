@@ -1,0 +1,4 @@
+# SYNTHETIC: Scheduled request of 2 days; entitlement shows 2 days used
+{"kind":"event","eventId":"leave-scheduled:11","type":"leave.request.scheduled","source":"orangehrm-leave-api","occurredAt":"2026-06-01T11:30:00.000Z","collectedAt":"2026-06-01T11:30:00.000Z","payload":{"requestId":11,"requestKey":"7:2026-06-10:2026-06-11","empNumber":7,"leaveTypeId":3,"fromDate":"2026-06-10","toDate":"2026-06-11","lengthDays":2,"entitlementKey":"7:3"}}
+{"kind":"event","eventId":"entitlement:5:2","type":"leave.entitlement.snapshot","source":"orangehrm-leave-api","occurredAt":"2026-06-01T11:31:00.000Z","collectedAt":"2026-06-01T11:31:00.000Z","payload":{"entitlementId":5,"entitlementKey":"7:3","empNumber":7,"leaveTypeId":3,"entitlement":10,"daysUsed":2}}
+{"kind":"source","source":"orangehrm-leave-api","observedAt":"2026-06-02T10:00:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-06-02T10:00:00.000Z"}
