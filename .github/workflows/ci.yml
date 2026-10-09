@@ -189,6 +189,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [quality]
+    env:
+      ORANGEHRM_USERNAME: ${{ secrets.ORANGEHRM_USERNAME }}
+      ORANGEHRM_PASSWORD: ${{ secrets.ORANGEHRM_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -210,12 +213,11 @@ jobs:
       - name: Contract and offline projects (no network, no credentials)
         working-directory: examples/orangehrm
         run: npx playwright test --project=contract --project=offline
-      - name: Public demo, read-only (only when credentials are configured as secrets)
-        if: ${{ secrets.ORANGEHRM_USERNAME != '' }}
+      - name: Public demo, read-only (only when credentials are configured as repository secrets)
+        # The secrets context is not available in step conditions; it is mapped through job env below.
+        if: env.ORANGEHRM_USERNAME != ''
         working-directory: examples/orangehrm
         env:
-          ORANGEHRM_USERNAME: ${{ secrets.ORANGEHRM_USERNAME }}
-          ORANGEHRM_PASSWORD: ${{ secrets.ORANGEHRM_PASSWORD }}
           ORANGEHRM_API_MODE: session
         run: npx playwright test --project=setup --project=demo
       - uses: actions/upload-artifact@v4
