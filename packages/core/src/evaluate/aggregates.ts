@@ -13,6 +13,7 @@ function label(aggregate: Aggregate): string {
 }
 
 function compare(op: Aggregate['op'], actual: number, expected: unknown): boolean | null {
+  // Aggregates only accept numeric operators (AggregateOperatorSchema).
   if (op === 'equals') return jsonEquals(actual, expected);
   if (op === 'notEquals') return !jsonEquals(actual, expected);
   if (typeof expected !== 'number') return null;

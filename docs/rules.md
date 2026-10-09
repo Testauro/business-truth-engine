@@ -23,11 +23,24 @@ expectations: # one or more; all must hold
     cardinality: exactly-one # exactly-one | at-least-one | none | { min, max? }
     assertions: # evaluated against every in-window observation
       - field: amount # path in the observation payload
-        op: equals # equals | notEquals | gt | gte | lt | lte
+        op: equals # equals | notEquals | gt | gte | lt | lte | matches | notMatches | in | notIn
         expected: { trigger: amount } # or { value: <literal> }
 ```
 
 Rules that can never fail (`{ min: 0 }` with no `max`) are rejected.
+
+### Operators and operands
+
+| Operator                 | Operand                                    | Meaning                                                                              |
+| ------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `equals` / `notEquals`   | `{ value }` or `{ trigger }`               | structural equality, no coercion (arrays compare element-wise)                       |
+| `gt` `gte` `lt` `lte`    | `{ value }` or `{ trigger }`               | ordered compare; both sides numbers or both strings                                  |
+| `matches` / `notMatches` | `{ pattern, flags? }`                      | JavaScript regular expression on a string field; compiled and validated at rule load |
+| `in` / `notIn`           | `{ value: [..] }` or `{ trigger }` → array | structural membership in a set                                                       |
+
+A field missing on the observation always fails. A `trigger` operand that is missing, or not an
+array for `in` / `notIn`, is indeterminate and yields UNKNOWN. Aggregates accept only the ordered
+and equality operators with scalar operands.
 
 ## Aggregate assertions
 

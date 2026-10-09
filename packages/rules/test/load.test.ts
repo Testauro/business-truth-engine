@@ -11,7 +11,14 @@ describe('loadRules', () => {
   it('loads the repository rules directory', async () => {
     const rules = await loadRules(path.join(repoRoot, 'rules'));
     expect(rules.map((rule) => `${rule.id}@${rule.version}`)).toEqual(['invoice-created-once@1']);
-    expect(rules[0]?.expectations[0]?.assertions).toHaveLength(3);
+    expect(rules[0]?.expectations[0]?.assertions).toHaveLength(5);
+    expect(rules[0]?.expectations[0]?.assertions.map((a) => a.op)).toEqual([
+      'equals',
+      'equals',
+      'equals',
+      'in',
+      'matches',
+    ]);
   });
 
   it('reports schema violations with the file name and path', () => {

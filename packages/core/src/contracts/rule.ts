@@ -36,15 +36,55 @@ export const CardinalitySchema = z.union([
 
 export type Cardinality = z.infer<typeof CardinalitySchema>;
 
-export const LiteralSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+export const ScalarSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+export type Scalar = z.infer<typeof ScalarSchema>;
+/** A literal operand: a scalar, or an array of scalars (for `in` / `notIn`, or structural `equals`). */
+export const LiteralSchema = z.union([ScalarSchema, z.array(ScalarSchema)]);
 export type Literal = z.infer<typeof LiteralSchema>;
 
-export const AssertionOperatorSchema = z.enum(['equals', 'notEquals', 'gt', 'gte', 'lt', 'lte']);
+/** Operators usable in per-observation assertions. */
+export const AssertionOperatorSchema = z.enum([
+  'equals',
+  'notEquals',
+  'gt',
+  'gte',
+  'lt',
+  'lte',
+  'matches',
+  'notMatches',
+  'in',
+  'notIn',
+]);
 export type AssertionOperator = z.infer<typeof AssertionOperatorSchema>;
+/** Operators usable in aggregates (numeric results only). */
+export const AggregateOperatorSchema = z.enum(['equals', 'notEquals', 'gt', 'gte', 'lt', 'lte']);
+export type AggregateOperator = z.infer<typeof AggregateOperatorSchema>;
+const REGEX_OPS = new Set<AssertionOperator>(['matches', 'notMatches']);
+const SET_OPS = new Set<AssertionOperator>(['in', 'notIn']);
+
+const REGEX_FLAGS = /^[gimsuy]*$/;
+export const PatternOperandSchema = z
+  .object({
+    pattern: z.string().min(1),
+    flags: z.string().regex(REGEX_FLAGS, 'flags must be a subset of gimsuy').optional(),
+  })
+  .strict()
+  .superRefine((operand, ctx) => {
+    try {
+      new RegExp(operand.pattern, operand.flags);
+    } catch (error) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['pattern'],
+        message: `invalid regular expression: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  });
 
 export const ExpectedValueSchema = z.union([
   z.object({ trigger: payloadPath }).strict(),
   z.object({ value: LiteralSchema }).strict(),
+  PatternOperandSchema,
 ]);
 export type ExpectedValue = z.infer<typeof ExpectedValueSchema>;
 
@@ -56,7 +96,35 @@ export const AssertionSchema = z
     expected: ExpectedValueSchema,
     description: z.string().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((assertion, ctx) => {
+    const isPattern = 'pattern' in assertion.expected;
+    if (REGEX_OPS.has(assertion.op) && !isPattern) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['expected'],
+        message: `${assertion.op} needs a { pattern } operand`,
+      });
+    }
+    if (!REGEX_OPS.has(assertion.op) && isPattern) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['expected'],
+        message: `{ pattern } is only valid with matches / notMatches`,
+      });
+    }
+    if (
+      SET_OPS.has(assertion.op) &&
+      'value' in assertion.expected &&
+      !Array.isArray(assertion.expected.value)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['expected', 'value'],
+        message: `${assertion.op} needs an array of values (or a trigger path to one)`,
+      });
+    }
+  });
 export type Assertion = z.infer<typeof AssertionSchema>;
 
 export const AggregateFnSchema = z.enum(['sum', 'min', 'max', 'avg', 'count', 'distinctCount']);
@@ -72,8 +140,11 @@ export const AggregateSchema = z
     fn: AggregateFnSchema,
     /** Path into the observation payload; not used by `count`. */
     field: payloadPath.optional(),
-    op: AssertionOperatorSchema,
-    expected: ExpectedValueSchema,
+    op: AggregateOperatorSchema,
+    expected: z.union([
+      z.object({ trigger: payloadPath }).strict(),
+      z.object({ value: ScalarSchema }).strict(),
+    ]),
     description: z.string().optional(),
   })
   .strict()

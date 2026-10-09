@@ -272,6 +272,19 @@ CI: pushed as `74978b0`; run 37890400497 green in 1.2 min on all four jobs. Both
   `AGGREGATE_MISMATCH: refund.issued: sum(amount) is 85.5 over 3 observations, expected lte 80`
   citing all three refunds and the trigger, exit 1.
 
+## Regex and set-membership operators (ROADMAP "Later"): COMPLETE (2026-10-09)
+
+- `matches` / `notMatches` (`{ pattern, flags? }`, compiled at rule load, bad regex rejected with
+  the rule; non-string observation values are mismatches; global patterns carry no state) and
+  `in` / `notIn` (array literal or trigger array; non-array trigger operand is UNKNOWN). Aggregates
+  are restricted to numeric operators with scalar operands.
+- Reference rule now also requires `currency in [USD, EUR, GBP]` and `invoiceId matches
+^inv_[0-9]{4,}$`; catalogue case `wrong-invoice-id-format` -> FAIL ASSERTION_MISMATCH.
+- Verification (actual runs): `pnpm verify` with PostgreSQL green: 25 files, 285 tests (14 new);
+  coverage 97.6% statements / 89.3% branches / 97.8% functions / 98.7% lines; `check:cli` passes
+  all 25 catalogued cases incl. `wrong-invoice-id-format` -> FAIL; scenarios 7/7; E2E 16 passed.
+  CLI: `"invoiceId" is "INV-1", expected matches /^inv_[0-9]{4,}$/` citing the invoice and the trigger.
+
 ## What's next
 
 ROADMAP "Later": PostgreSQL evidence store, aggregate assertions, multi-trigger correlation,

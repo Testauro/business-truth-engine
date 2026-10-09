@@ -53,3 +53,72 @@ describe('RuleSchema', () => {
     expect(resolveCardinality({ min: 2 })).toEqual({ min: 2, max: Number.POSITIVE_INFINITY });
   });
 });
+
+describe('operator operand validation', () => {
+  const base = invoiceRuleInput.expectations[0];
+  const withAssertion = (a: unknown) =>
+    RuleSchema.safeParse({ ...invoiceRuleInput, expectations: [{ ...base, assertions: [a] }] });
+
+  it('accepts regex and set operands in their proper shapes', () => {
+    expect(
+      withAssertion({
+        field: 'invoiceId',
+        op: 'matches',
+        expected: { pattern: '^inv_', flags: 'i' },
+      }).success,
+    ).toBe(true);
+    expect(
+      withAssertion({ field: 'currency', op: 'in', expected: { value: ['USD', 'EUR'] } }).success,
+    ).toBe(true);
+    expect(
+      withAssertion({ field: 'currency', op: 'notIn', expected: { trigger: 'blocked' } }).success,
+    ).toBe(true);
+    expect(
+      withAssertion({ field: 'tags', op: 'equals', expected: { value: ['a', 'b'] } }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    [
+      'invalid regex',
+      { field: 'x', op: 'matches', expected: { pattern: '(' } },
+      'invalid regular expression',
+    ],
+    [
+      'bad flags',
+      { field: 'x', op: 'matches', expected: { pattern: 'a', flags: 'z' } },
+      'subset of gimsuy',
+    ],
+    [
+      'matches without pattern',
+      { field: 'x', op: 'matches', expected: { value: 'a' } },
+      'needs a { pattern } operand',
+    ],
+    [
+      'pattern with equals',
+      { field: 'x', op: 'equals', expected: { pattern: 'a' } },
+      'only valid with matches',
+    ],
+    [
+      'in with scalar',
+      { field: 'x', op: 'in', expected: { value: 'USD' } },
+      'needs an array of values',
+    ],
+  ])('rejects %s', (_label, a, message) => {
+    const result = withAssertion(a);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((i) => i.message).join('\n')).toContain(message);
+  });
+
+  it('aggregates only accept numeric operators and scalar operands', () => {
+    const agg = (a: unknown) =>
+      RuleSchema.safeParse({ ...invoiceRuleInput, expectations: [{ ...base, aggregates: [a] }] });
+    expect(
+      agg({ fn: 'sum', field: 'amount', op: 'matches', expected: { pattern: '1' } }).success,
+    ).toBe(false);
+    expect(agg({ fn: 'count', op: 'in', expected: { value: [1, 2] } }).success).toBe(false);
+    expect(agg({ fn: 'sum', field: 'amount', op: 'lte', expected: { value: [1] } }).success).toBe(
+      false,
+    );
+  });
+});

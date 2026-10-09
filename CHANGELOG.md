@@ -7,6 +7,11 @@ versions follow SemVer. Unreleased changes sit at the top.
 
 ### Added
 
+- Assertion operators `matches` / `notMatches` with a `{ pattern, flags? }` operand (validated at
+  rule load) and `in` / `notIn` with an array literal or a trigger path to an array; literal
+  operands may now be arrays. The reference rule checks the invoice-number format and a currency
+  allow-list; new fixture `wrong-invoice-id-format`.
+
 - Aggregate assertions on expectations: `aggregates: [{ fn, field, op, expected }]` with `sum`,
   `min`, `max`, `avg`, `count`, `distinctCount` over the distinct in-window outcomes, evaluated only
   once the set is complete; new reason code `AGGREGATE_MISMATCH`; computed values reported on the

@@ -8,6 +8,7 @@ export type AssertionOutcome =
 
 function describeValue(value: unknown): string {
   if (value === undefined) return 'undefined';
+  if (value instanceof RegExp) return value.toString();
   return JSON.stringify(value);
 }
 
@@ -37,14 +38,19 @@ function compareSameType<T extends number | string>(
       return a <= b;
     case 'equals':
     case 'notEquals':
+    case 'matches':
+    case 'notMatches':
+    case 'in':
+    case 'notIn':
       return null;
   }
 }
 
 /**
  * Evaluate one assertion against an observation payload. Missing fields on the
- * observation are failures (the outcome is wrong). Missing fields on the
- * trigger are indeterminate: we cannot judge, so the caller degrades to UNKNOWN.
+ * observation are failures (the outcome is wrong). Missing or ill-typed
+ * operands on the trigger are indeterminate: we cannot judge, so the caller
+ * degrades to UNKNOWN.
  */
 export function evaluateAssertion(
   assertion: Assertion,
@@ -52,13 +58,23 @@ export function evaluateAssertion(
   triggerPayload: Record<string, unknown>,
 ): AssertionOutcome {
   let expected: unknown;
-  if ('trigger' in assertion.expected) {
+  if ('pattern' in assertion.expected) {
+    // Validated at rule-load time; constructing again here cannot throw.
+    expected = new RegExp(assertion.expected.pattern, assertion.expected.flags);
+  } else if ('trigger' in assertion.expected) {
     expected = getPath(triggerPayload, assertion.expected.trigger);
     if (expected === undefined) {
       return {
         status: 'indeterminate',
         assertion,
         message: `trigger payload has no value at "${assertion.expected.trigger}"`,
+      };
+    }
+    if ((assertion.op === 'in' || assertion.op === 'notIn') && !Array.isArray(expected)) {
+      return {
+        status: 'indeterminate',
+        assertion,
+        message: `trigger payload value at "${assertion.expected.trigger}" is ${describeValue(expected)}, not an array; ${assertion.op} needs a set`,
       };
     }
   } else {
@@ -90,6 +106,28 @@ export function evaluateAssertion(
     case 'lte':
       ok = compareOrdered(assertion.op, actual, expected);
       break;
+    case 'matches':
+    case 'notMatches': {
+      if (typeof actual !== 'string' || !(expected instanceof RegExp)) {
+        ok = null;
+        break;
+      }
+      // A fresh lastIndex for every evaluation: global/sticky patterns must not carry state.
+      expected.lastIndex = 0;
+      const hit = expected.test(actual);
+      ok = assertion.op === 'matches' ? hit : !hit;
+      break;
+    }
+    case 'in':
+    case 'notIn': {
+      if (!Array.isArray(expected)) {
+        ok = null;
+        break;
+      }
+      const member = expected.some((candidate) => jsonEquals(actual, candidate));
+      ok = assertion.op === 'in' ? member : !member;
+      break;
+    }
   }
 
   if (ok === null) {

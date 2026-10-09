@@ -58,6 +58,17 @@
       ]
     },
     {
+      "name": "wrong-invoice-id-format",
+      "now": "2026-01-15T10:03:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_1001\"",
+          "verdict": "FAIL",
+          "reasons": ["ASSERTION_MISMATCH"]
+        }
+      ]
+    },
+    {
       "name": "not-yet-due",
       "now": "2026-01-15T10:01:00Z",
       "expected": [

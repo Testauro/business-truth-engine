@@ -36,3 +36,11 @@ expectations:
         op: equals
         expected: { trigger: currency }
         description: invoice currency equals the payment currency
+      - field: currency
+        op: in
+        expected: { value: [USD, EUR, GBP] }
+        description: only currencies invoicing is licensed to bill
+      - field: invoiceId
+        op: matches
+        expected: { pattern: '^inv_[0-9]{4,}$' }
+        description: invoice numbers follow the ledger format

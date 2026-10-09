@@ -11,7 +11,10 @@ export {
 export type { EvidenceEvent, EvidenceRecord, SourceStatus } from './contracts/evidence.js';
 export {
   AggregateFnSchema,
+  AggregateOperatorSchema,
   AggregateSchema,
+  PatternOperandSchema,
+  ScalarSchema,
   AssertionOperatorSchema,
   AssertionSchema,
   CardinalitySchema,
@@ -26,6 +29,8 @@ export {
 export type {
   Aggregate,
   AggregateFn,
+  AggregateOperator,
+  Scalar,
   Assertion,
   AssertionOperator,
   Cardinality,
