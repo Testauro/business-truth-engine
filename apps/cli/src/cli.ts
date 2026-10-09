@@ -228,10 +228,9 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
     .action(async (options: { rules?: string[]; cwd: string }) => {
       let targets = options.rules;
       if (targets === undefined) {
-        const { loadBteConfig } = await import('@bte/sdk');
-        const loaded = await loadBteConfig({ cwd: options.cwd });
-        const path = await import('node:path');
-        targets = loaded.config.rules.map((r) => path.resolve(loaded.dir, r));
+        // Only the rule paths are read: validating rules must never require source secrets.
+        const { loadRuleTargets } = await import('@bte/sdk');
+        targets = await loadRuleTargets({ cwd: options.cwd });
       }
       const loadedRules = (await Promise.all(targets.map((target) => loadRules(target)))).flat();
       for (const rule of loadedRules) {

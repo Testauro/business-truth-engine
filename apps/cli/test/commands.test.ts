@@ -41,6 +41,36 @@ describe('bte init', () => {
   });
 });
 
+describe('bte rules validate never needs source secrets', () => {
+  it('validates the configured rules even when the config references unset environment variables', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'bte-rules-'));
+    await writeFile(
+      path.join(dir, 'bte.config.json'),
+      JSON.stringify({
+        rules: [path.join(repoRoot, 'rules')],
+        sources: [
+          {
+            type: 'http',
+            name: 'a',
+            baseUrl: '${SECRET_URL_NOT_SET}',
+            requests: [
+              { url: 'x', mapping: { type: 't', eventId: 'id', occurredAt: 'at', payload: {} } },
+            ],
+          },
+        ],
+      }),
+    );
+    const { code, out, err } = await invoke(['rules', 'validate', '--cwd', dir]);
+    expect(err).toBe('');
+    expect(code).toBe(0);
+    expect(out).toContain('ok  invoice-created-once@v1');
+    await writeFile(path.join(dir, 'bte.config.json'), JSON.stringify({ rules: [], sources: [] }));
+    const bad = await invoke(['rules', 'validate', '--cwd', dir]);
+    expect(bad.code).toBe(2);
+    expect(bad.err).toContain('"rules" must be a non-empty array of paths');
+  });
+});
+
 describe('bte verify / explain (config-driven)', () => {
   async function project(): Promise<string> {
     const dir = await mkdtemp(path.join(tmpdir(), 'bte-verify-'));

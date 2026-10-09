@@ -186,15 +186,14 @@ export async function loadRawBteConfig(options: LoadConfigOptions = {}): Promise
 /** The `rules` targets of a config, resolved against its directory, without touching sources or secrets. */
 export async function loadRuleTargets(options: LoadConfigOptions = {}): Promise<string[]> {
   const { raw, file, dir } = await loadRawBteConfig(options);
-  const rules = (raw as { rules?: unknown } | null)?.rules;
-  if (
-    !Array.isArray(rules) ||
-    rules.length === 0 ||
-    !rules.every((r) => typeof r === 'string' && r.trim() !== '')
-  ) {
+  const rules: unknown = (raw as { rules?: unknown } | null)?.rules;
+  const targets = Array.isArray(rules)
+    ? rules.filter((r): r is string => typeof r === 'string' && r.trim() !== '')
+    : [];
+  if (!Array.isArray(rules) || targets.length === 0 || targets.length !== rules.length) {
     throw new ConfigError(`${file}: "rules" must be a non-empty array of paths`);
   }
-  return rules.map((r) => path.resolve(dir, r));
+  return targets.map((r) => path.resolve(dir, r));
 }
 
 /**

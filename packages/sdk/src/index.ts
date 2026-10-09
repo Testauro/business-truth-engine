@@ -29,6 +29,8 @@ export {
   defineConfig,
   findConfigFile,
   loadBteConfig,
+  loadRawBteConfig,
+  loadRuleTargets,
   validateConfig,
 } from './config.js';
 export type {
@@ -36,6 +38,7 @@ export type {
   BteConfigInput,
   LoadConfigOptions,
   LoadedConfig,
+  RawConfig,
   SourceConfig,
 } from './config.js';
 export { ConfigError, interpolateEnv, loadDotEnv, parseDotEnv } from './env.js';
