@@ -1,39 +1,46 @@
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Rule } from '@bte/core';
-import { BteVerifier, httpEvidenceSource } from '@bte/playwright';
-import { loadRules } from '@bte/rules';
+import { createBteFixtures, type Bte, type BteWorkerState } from '@bte/playwright';
 import { test as base, expect } from '@playwright/test';
 import { DemoApi } from '../api/demo-api.js';
 import { CheckoutPage } from '../pages/checkout.page.js';
 import { startDemoServer, type DemoServer } from './demo-server.js';
 
-const rulesDir = fileURLToPath(new URL('../../../rules', import.meta.url));
+const e2eDir = fileURLToPath(new URL('..', import.meta.url));
 
 interface WorkerFixtures {
   demoServer: DemoServer;
-  rules: Rule[];
+  bteState: BteWorkerState;
 }
 
 interface TestFixtures {
   api: DemoApi;
   checkout: CheckoutPage;
-  /** BTE verifier bound to this test's demo server and clock; attaches verdicts to the report. */
-  bte: BteVerifier;
+  bte: Bte;
 }
+
+/**
+ * The demo's Playwright `test`: its own fixtures (server, API client, page
+ * objects) plus BTE's, added with `createBteFixtures` exactly as a third
+ * party would. Sources come from tests/e2e/bte.config.ts (generic HTTP
+ * adapter over the demo's JSON API); the demo's clock drives evaluation time.
+ */
+const bteFixtures = createBteFixtures({ config: { cwd: e2eDir, env: process.env } });
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   demoServer: [
     async ({}, use) => {
       const server = await startDemoServer();
+      process.env['BTE_DEMO_BASE_URL'] = server.baseUrl;
       await use(server);
       await server.stop();
     },
     { scope: 'worker' },
   ],
-  rules: [
-    async ({}, use) => {
-      await use(await loadRules(path.resolve(rulesDir)));
+  // bteState must see BTE_DEMO_BASE_URL, so it depends on demoServer.
+  bteState: [
+    async ({ demoServer }, use) => {
+      void demoServer;
+      await bteFixtures.bteState[0]({}, use);
     },
     { scope: 'worker' },
   ],
@@ -42,7 +49,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
   api: async ({ request }, use) => {
     const api = new DemoApi(request);
-    // Every test starts from a clean fault configuration.
     await api.setFaults([]);
     await use(api);
     await api.setFaults([]);
@@ -50,17 +56,11 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   checkout: async ({ page }, use) => {
     await use(new CheckoutPage(page));
   },
-  bte: async ({ request, api, rules }, use, testInfo) => {
-    const verifier = new BteVerifier({
-      rules,
-      fetchEvidence: httpEvidenceSource(request, '/evidence'),
-      now: () => api.now(),
-      refresh: async () => {
-        await api.collectEvidence();
-      },
-      testInfo,
-    });
-    await use(verifier);
+  bte: async ({ bteState, api }, use, testInfo) => {
+    // Evaluate at the demo's (controllable) clock rather than the wall clock.
+    const { createBte } = await import('@bte/playwright');
+    const bte = createBte(bteState, { now: () => api.now() }, testInfo);
+    await use(bte);
   },
 });
 

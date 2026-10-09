@@ -1,0 +1,43 @@
+{
+  "name": "@bte/sdk",
+  "version": "0.1.0",
+  "description": "Business Truth Engine SDK: the documented public entry point. Define rules and configuration in TypeScript, load bte.config files with environment interpolation, resolve evidence sources, collect and evaluate.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --root ../.. packages/sdk"
+  },
+  "dependencies": {
+    "@bte/core": "workspace:*",
+    "@bte/evidence": "workspace:*",
+    "@bte/evidence-http": "workspace:*",
+    "@bte/rules": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "@bte/evidence-postgres": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@bte/evidence-postgres": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@bte/evidence-postgres": "workspace:*"
+  }
+}

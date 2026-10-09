@@ -15,6 +15,7 @@
     "@bte/demo": "workspace:*",
     "@bte/playwright": "workspace:*",
     "@bte/rules": "workspace:*",
+    "@bte/sdk": "workspace:*",
     "@playwright/test": "^1.64.0",
     "zod": "^4.6.5"
   }

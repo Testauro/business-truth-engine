@@ -104,6 +104,15 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  packages/evidence-http:
+    dependencies:
+      '@bte/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
   packages/evidence-postgres:
     dependencies:
       '@bte/core':
@@ -131,6 +140,9 @@ importers:
       '@bte/rules':
         specifier: workspace:*
         version: link:../rules
+      '@bte/sdk':
+        specifier: workspace:*
+        version: link:../sdk
     devDependencies:
       '@playwright/test':
         specifier: ^1.64.0
@@ -148,6 +160,28 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  packages/sdk:
+    dependencies:
+      '@bte/core':
+        specifier: workspace:*
+        version: link:../core
+      '@bte/evidence':
+        specifier: workspace:*
+        version: link:../evidence
+      '@bte/evidence-http':
+        specifier: workspace:*
+        version: link:../evidence-http
+      '@bte/rules':
+        specifier: workspace:*
+        version: link:../rules
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@bte/evidence-postgres':
+        specifier: workspace:*
+        version: link:../evidence-postgres
+
   tests/e2e:
     dependencies:
       '@bte/core':
@@ -162,6 +196,9 @@ importers:
       '@bte/rules':
         specifier: workspace:*
         version: link:../../packages/rules
+      '@bte/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@playwright/test':
         specifier: ^1.64.0
         version: 1.64.0

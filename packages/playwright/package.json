@@ -22,7 +22,8 @@
   "dependencies": {
     "@bte/core": "workspace:*",
     "@bte/evidence": "workspace:*",
-    "@bte/rules": "workspace:*"
+    "@bte/rules": "workspace:*",
+    "@bte/sdk": "workspace:*"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.40"

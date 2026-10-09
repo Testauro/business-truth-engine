@@ -82,7 +82,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/rules/src/**/*.ts', 'packages/evidence/src/**/*.ts'],
+    files: [
+      'packages/rules/src/**/*.ts',
+      'packages/evidence/src/**/*.ts',
+      'packages/evidence-http/src/**/*.ts',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -115,6 +119,30 @@ export default tseslint.config(
             {
               group: ['fastify', 'fastify/*', '@fastify/*', '@playwright/*', 'playwright*'],
               message: 'no framework code in library packages.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/sdk/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@bte/cli',
+                '@bte/demo',
+                '@bte/playwright',
+                'fastify',
+                'fastify/*',
+                '@fastify/*',
+                '@playwright/*',
+              ],
+              message: 'the SDK is framework-agnostic.',
             },
           ],
         },

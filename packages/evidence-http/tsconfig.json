@@ -7,18 +7,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "references": [
-    {
-      "path": "../core"
-    },
-    {
-      "path": "../evidence"
-    },
-    {
-      "path": "../rules"
-    },
-    {
-      "path": "../sdk"
-    }
-  ]
+  "references": [{ "path": "../core" }]
 }

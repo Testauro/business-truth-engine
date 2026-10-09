@@ -67,3 +67,7 @@ export type {
   SourceAssessment,
   Verdict,
 } from './verdict.js';
+export { attestation, collectAll } from './adapters.js';
+export type { CollectAllResult, CollectContext, EvidenceSource } from './adapters.js';
+export { FieldSourceSchema, MappingError, MappingSchema, mapItems } from './mapping.js';
+export type { FieldSource, MapResult, Mapping, MappingProblem } from './mapping.js';

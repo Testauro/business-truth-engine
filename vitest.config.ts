@@ -12,6 +12,8 @@ export default defineConfig({
       '@bte/rules': `${root}packages/rules/src/index.ts`,
       '@bte/evidence': `${root}packages/evidence/src/index.ts`,
       '@bte/evidence-postgres': `${root}packages/evidence-postgres/src/index.ts`,
+      '@bte/evidence-http': `${root}packages/evidence-http/src/index.ts`,
+      '@bte/sdk': `${root}packages/sdk/src/index.ts`,
       '@bte/playwright': `${root}packages/playwright/src/index.ts`,
     },
   },

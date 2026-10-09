@@ -12,13 +12,16 @@
       "path": "../core"
     },
     {
-      "path": "../evidence"
-    },
-    {
       "path": "../rules"
     },
     {
-      "path": "../sdk"
+      "path": "../evidence"
+    },
+    {
+      "path": "../evidence-http"
+    },
+    {
+      "path": "../evidence-postgres"
     }
   ]
 }

@@ -210,7 +210,7 @@ export function buildDemo(options: DemoOptions): DemoApp {
   app.get('/admin/state', () => ({
     now: toIso(clock.now()),
     faults: faults.list(),
-    orders: orders.list(),
+    orders: orders.list().map((order) => ({ ...order, total: Math.round(order.totalCents) / 100 })),
     payments: payments.list(),
     pendingInvoices: invoicing.pendingCount,
   }));

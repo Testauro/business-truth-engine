@@ -59,7 +59,8 @@ test.describe('business truth: invoice-created-once', () => {
     const { orderId } = await checkoutAndVerifyBusinessState(checkout, api);
     expect((await api.getInvoices(orderId)).invoices).toHaveLength(1);
 
-    await api.collectEvidence();
+    bte.correlate({ orderId });
+    await bte.collect();
     const early = await bte.evaluate(RULE.invoiceCreatedOnce, orderId);
     expect(early.verdict?.verdict).toBe('PENDING');
     expect(early.verdict?.reasons.map((r) => r.code)).toEqual(['WINDOW_OPEN']);
@@ -158,7 +159,7 @@ test.describe('business truth: invoice-created-once', () => {
     expect((await api.state()).pendingInvoices).toBe(1);
 
     await api.advanceClock(60_000);
-    await api.collectEvidence();
+    await bte.collect();
     expect((await bte.evaluate(RULE.invoiceCreatedOnce, orderId)).verdict?.verdict).toBe('PENDING');
 
     const advanced = await api.advanceClock(PAST_DELAYED_INVOICE_MS - 60_000);
@@ -168,14 +169,16 @@ test.describe('business truth: invoice-created-once', () => {
     expect(verdict.expectations[0]?.observations[0]?.placement).toBe('late');
   });
 
-  test('duplicate delivery of evidence does not fake a duplicate invoice', async ({
+  test('collecting the same evidence twice does not fake a duplicate invoice', async ({
     checkout,
     api,
     bte,
   }) => {
-    await seed(api, ['duplicate-delivery']);
     const { orderId } = await checkoutAndVerifyBusinessState(checkout, api);
     await api.advanceClock(PAST_DEADLINE_MS);
+    // Two collections deliver every event twice; the engine must count each once.
+    await bte.collect();
+    await bte.collect();
     const verdict = await bte.expectInvariant(RULE.invoiceCreatedOnce, orderId);
     expect(verdict.reasons.map((r) => r.code)).toContain('REDELIVERY_DEDUPLICATED');
     expect(verdict.expectations[0]?.distinctInWindow).toBe(1);

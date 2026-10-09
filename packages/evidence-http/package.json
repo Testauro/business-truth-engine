@@ -1,0 +1,29 @@
+{
+  "name": "@bte/evidence-http",
+  "version": "0.1.0",
+  "description": "Business Truth Engine HTTP/REST evidence adapter: fetch an application's own JSON APIs with environment-based auth, map fields to the evidence contract, attest source health and completeness.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --root ../.. packages/evidence-http"
+  },
+  "dependencies": {
+    "@bte/core": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}
