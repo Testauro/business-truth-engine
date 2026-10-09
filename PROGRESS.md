@@ -182,6 +182,15 @@ Defects found and fixed during this milestone:
   config; tests were added rather than thresholds lowered, except core branches (85%) and core
   statements (95%), which reflect defensive `unreachable` guards.
 
+## Release v0.1.0: PUBLISHED (2026-10-09)
+
+- Tag `v0.1.0` (annotated) on `f5986fd`; release notes from CHANGELOG at
+  https://github.com/Testauro/business-truth-engine/releases/tag/v0.1.0 (not a draft or pre-release).
+- CI on the tagged commit: run 37889351575, success in 1.3 min, all four jobs green (quality,
+  Node 24, Node 26, Playwright incl. the demonstration gate). The preceding review commit `6f722da`
+  was green on run 37889098474.
+- Repository is public. No npm publish; the release is the GitHub tag and notes only.
+
 ## Release readiness (0.1.0)
 
 Ready to tag as `v0.1.0`: every gate passes locally and in GitHub Actions on Node 24 and 26. Verified in this environment (macOS, Node 26.3.0,
