@@ -7,6 +7,13 @@ versions follow SemVer. Unreleased changes sit at the top.
 
 ### Added
 
+- Correlation chains: `expectation.correlation { trigger, observation, via: [{ type, source,
+from, to }] }` lets an outcome be reached through intermediate events, with every hop source
+  subject to the trust gate and completeness ladder; `CORRELATION_HOP` reasons and
+  `correlation.hops[]` on the expectation verdict. Alternative trigger types: `trigger.type` may be
+  a list. Example rule `examples/rules/ledger-posting-per-invoice.yaml` and catalogue
+  `examples/fixtures/chain/cases.json`.
+
 - Assertion operators `matches` / `notMatches` with a `{ pattern, flags? }` operand (validated at
   rule load) and `in` / `notIn` with an array literal or a trigger path to an array; literal
   operands may now be arrays. The reference rule checks the invoice-number format and a currency

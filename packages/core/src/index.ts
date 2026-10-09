@@ -12,6 +12,10 @@ export type { EvidenceEvent, EvidenceRecord, SourceStatus } from './contracts/ev
 export {
   AggregateFnSchema,
   AggregateOperatorSchema,
+  CorrelationHopSchema,
+  CorrelationSchema,
+  resolveCorrelation,
+  triggerTypes,
   AggregateSchema,
   PatternOperandSchema,
   ScalarSchema,
@@ -30,6 +34,8 @@ export type {
   Aggregate,
   AggregateFn,
   AggregateOperator,
+  Correlation,
+  CorrelationHop,
   Scalar,
   Assertion,
   AssertionOperator,
@@ -51,6 +57,8 @@ export type { AssertionOutcome } from './evaluate/assertions.js';
 export { REASON_CODES, VERDICTS, combineVerdicts } from './verdict.js';
 export type {
   AggregateSummary,
+  CorrelationSummary,
+  CorrelationHopSummary,
   ExpectationVerdict,
   ObservationSummary,
   Reason,

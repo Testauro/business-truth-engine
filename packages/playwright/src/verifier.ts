@@ -1,5 +1,5 @@
 import type { EvidenceRecord, Rule, RuleVerdict, Verdict } from '@bte/core';
-import { EvidenceSet, FixedClock, evaluateRule, stableKey } from '@bte/core';
+import { EvidenceSet, FixedClock, evaluateRule, stableKey, triggerTypes } from '@bte/core';
 import { toNdjsonLine } from '@bte/evidence';
 import type { TestInfo } from '@playwright/test';
 import { expect } from '@playwright/test';
@@ -123,7 +123,7 @@ export class BteVerifier {
       const lastVerdict = last?.verdict;
       const detail =
         lastVerdict === undefined
-          ? `no ${this.rule(ruleId).trigger.type} trigger event found for ${stableKey(correlationValue)}`
+          ? `no ${triggerTypes(this.rule(ruleId)).join(' | ')} trigger event found for ${stableKey(correlationValue)}`
           : explainVerdict(lastVerdict);
       if (lastVerdict !== undefined) await this.#attach(lastVerdict, last?.records ?? []);
       const original = error instanceof Error ? error.message : String(error);

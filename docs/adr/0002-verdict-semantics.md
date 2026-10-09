@@ -36,7 +36,15 @@ Per expectation, evaluated at an injected instant `now`, with `deadline = trigge
 in-window outcomes) are evaluated only once the set is complete: window closed and
 `completeThrough >= deadline`, even for unbounded cardinality. Before that the expectation stays
 PENDING / UNKNOWN as in (4) and (5); a partial sum is never a verdict. A violated aggregate is
-`FAIL` (`AGGREGATE_MISMATCH`); a missing trigger operand is `UNKNOWN`. 6. **Trigger trust.** When a rule declares `trigger.source`, only trigger events from that source
+`FAIL` (`AGGREGATE_MISMATCH`); a missing trigger operand is `UNKNOWN`. 5c. **Correlation chains.** When an expectation reaches its outcome through hops
+(`correlation.via`), the key set flows trigger → hop events (inside the window) → observations.
+Each hop source enters the trust gate (untrusted → `UNKNOWN`) and the completeness ladder: the
+chain is complete only when the expectation source and every hop source are complete through
+the deadline; otherwise the weakest link decides `PENDING` (lagging watermark) or `UNKNOWN`
+(no watermark). A hop that matches nothing yields no keys, so a missing intermediate outcome
+surfaces as a missing final outcome only once the hop source is complete.
+5d. **Alternative triggers.** `trigger.type` may list several types; each matching event is
+evaluated as its own trigger, ordered by occurrence. 6. **Trigger trust.** When a rule declares `trigger.source`, only trigger events from that source
 are evaluated, and the source must be attested available and authoritative. Otherwise the rule
 verdict is `UNKNOWN` regardless of the expectations (which are still evaluated and reported):
 every value taken from the trigger (amounts, currency, even the fact that payment happened) is

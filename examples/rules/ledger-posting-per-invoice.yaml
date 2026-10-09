@@ -1,0 +1,33 @@
+# Example of a correlation chain and alternative trigger types: a paid (or re-invoiced) order
+# produces invoices in the invoicing system, and the general ledger must post exactly one entry
+# per invoice. Postings carry the invoiceId, not the orderId, so the rule hops through invoices.
+id: ledger-posting-per-invoice
+version: 1
+description: Every invoice raised for a paid order is posted to the ledger exactly once, for the paid amount.
+trigger:
+  type: [order.paid, order.reinvoiced]
+  source: orders
+  correlationKey: orderId
+expectations:
+  - id: posting
+    type: ledger.posted
+    source: ledger
+    distinctBy: postingId
+    correlation:
+      via:
+        - type: invoice.created
+          source: invoicing
+          from: orderId
+          to: invoiceId
+      observation: invoiceId
+    window:
+      within: 10m
+      before: 5s
+    cardinality: exactly-one
+    assertions:
+      - field: amount
+        op: equals
+        expected: { trigger: amount }
+      - field: currency
+        op: equals
+        expected: { trigger: currency }

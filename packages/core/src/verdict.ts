@@ -49,6 +49,7 @@ export const REASON_CODES = [
   'CONFLICTING_REDELIVERY',
   'REDELIVERY_DEDUPLICATED',
   'CORRELATION_VALUE_MISSING',
+  'CORRELATION_HOP',
 ] as const;
 export type ReasonCode = (typeof REASON_CODES)[number];
 
@@ -97,6 +98,25 @@ export interface AggregateSummary {
   message: string;
 }
 
+export interface CorrelationHopSummary {
+  type: string;
+  source: string;
+  /** Hop events in the window whose `from` value was in the incoming key set. */
+  matched: number;
+  /** Key set produced by this hop (stable keys). */
+  keys: readonly string[];
+  evidenceIds: readonly string[];
+  sourceAssessment: SourceAssessment;
+}
+
+export interface CorrelationSummary {
+  triggerPath: string;
+  observationPath: string;
+  /** Final key set the observations were matched against. */
+  keys: readonly string[];
+  hops: readonly CorrelationHopSummary[];
+}
+
 export interface ExpectationVerdict {
   expectationId: string;
   type: string;
@@ -104,6 +124,7 @@ export interface ExpectationVerdict {
   deadline: string;
   windowStart: string;
   cardinality: { min: number; max: number | null };
+  correlation: CorrelationSummary;
   distinctInWindow: number;
   observations: readonly ObservationSummary[];
   /** One entry per declared aggregate, in rule order. */

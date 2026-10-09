@@ -2,12 +2,19 @@ import type { Clock } from '../clock.js';
 import { toEpochMillis, toIso } from '../clock.js';
 import type { SourceStatus } from '../contracts/evidence.js';
 import type { Expectation, Rule } from '../contracts/rule.js';
-import { expectationId, resolveCardinality } from '../contracts/rule.js';
+import {
+  expectationId,
+  resolveCardinality,
+  resolveCorrelation,
+  triggerTypes,
+} from '../contracts/rule.js';
 import { parseDuration } from '../duration.js';
 import type { DedupedEvent, EvidenceSet } from '../evidence-set.js';
-import { getPath, jsonEquals, stableKey } from '../path.js';
+import { getPath, stableKey } from '../path.js';
 import type {
   AggregateSummary,
+  CorrelationHopSummary,
+  CorrelationSummary,
   ExpectationVerdict,
   ObservationSummary,
   Reason,
@@ -134,16 +141,18 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
     source,
   };
 
-  const correlationValue = getPath(trigger.canonical.payload, rule.trigger.correlationKey);
+  const { triggerPath, observationPath, via } = resolveCorrelation(rule, expectation);
+  const correlationValue = getPath(trigger.canonical.payload, triggerPath);
   if (correlationValue === undefined) {
     reasons.push({
       code: 'CORRELATION_VALUE_MISSING',
-      message: `trigger ${trigger.canonical.eventId} has no value at "${rule.trigger.correlationKey}"; cannot correlate`,
+      message: `trigger ${trigger.canonical.eventId} has no value at "${triggerPath}"; cannot correlate`,
       evidenceIds: [trigger.canonical.eventId],
     });
     return {
       ...base,
       verdict: 'UNKNOWN',
+      correlation: { triggerPath, observationPath, keys: [], hops: [] },
       distinctInWindow: 0,
       observations: [],
       aggregates: notEvaluated(expectation),
@@ -151,13 +160,66 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
     };
   }
 
-  const observationKey = expectation.correlationKey ?? rule.trigger.correlationKey;
+  // Walk the correlation chain: each hop maps the current key set to the next
+  // through events of its own type and source, inside the same window.
+  let keys = new Set<string>([stableKey(correlationValue)]);
+  const hops: CorrelationHopSummary[] = [];
+  const hopLinks: { assessment: SourceAssessment; ids: string[]; label: string }[] = [];
+  for (const hop of via) {
+    const hopStatus = evidence.sourceStatus(hop.source);
+    const assessment: SourceAssessment = {
+      ...assessSource(hopStatus, deadline),
+      source: hop.source,
+    };
+    const ids = hopStatus === undefined ? [] : [sourceEvidenceId(hopStatus)];
+    const incoming = keys;
+    const matched = evidence
+      .eventsOfType(hop.type)
+      .filter((event) => event.canonical.source === hop.source)
+      .filter((event) => {
+        const occurred = toEpochMillis(event.canonical.occurredAt);
+        return occurred >= windowStart && occurred <= deadline;
+      })
+      .filter((event) => {
+        const from = getPath(event.canonical.payload, hop.from);
+        return from !== undefined && incoming.has(stableKey(from));
+      });
+    const next = new Set<string>();
+    for (const event of matched) {
+      const to = getPath(event.canonical.payload, hop.to);
+      if (to !== undefined) next.add(stableKey(to));
+    }
+    const matchedIds = matched.map((event) => event.canonical.eventId);
+    hops.push({
+      type: hop.type,
+      source: hop.source,
+      matched: matched.length,
+      keys: [...next].sort(),
+      evidenceIds: matchedIds,
+      sourceAssessment: assessment,
+    });
+    hopLinks.push({ assessment, ids, label: `hop ${hop.type}` });
+    reasons.push({
+      code: 'CORRELATION_HOP',
+      message: `hop ${hop.type} from "${hop.source}": ${plural(matched.length, 'event')} matched ${plural(incoming.size, 'key')} via "${hop.from}", yielding ${plural(next.size, 'key')} via "${hop.to}"`,
+      evidenceIds: [...ids, ...matchedIds],
+    });
+    keys = next;
+  }
+  const correlation: CorrelationSummary = {
+    triggerPath,
+    observationPath,
+    keys: [...keys].sort(),
+    hops,
+  };
+
   const candidates = evidence
     .eventsOfType(expectation.type)
     .filter((event) => event.canonical.source === expectation.source)
-    .filter((event) =>
-      jsonEquals(getPath(event.canonical.payload, observationKey), correlationValue),
-    );
+    .filter((event) => {
+      const value = getPath(event.canonical.payload, observationPath);
+      return value !== undefined && keys.has(stableKey(value));
+    });
 
   const observations: ObservationSummary[] = candidates.map((event) => {
     const distinctValue =
@@ -212,6 +274,7 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
   const finish = (verdict: Verdict): ExpectationVerdict => ({
     ...base,
     verdict,
+    correlation,
     distinctInWindow,
     observations,
     aggregates,
@@ -220,6 +283,18 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
 
   // 1. Trust gate. Without an authoritative, available source nothing can be
   //    confirmed: not presence, not absence, not correctness.
+  const untrustedHop = hopLinks.find((link) => !link.assessment.trusted);
+  if (untrustedHop !== undefined) {
+    reasons.push(
+      untrustedReason(
+        untrustedHop.assessment,
+        [...untrustedHop.ids, ...inWindowIds],
+        untrustedHop.label,
+        'the correlation chain cannot be followed, so neither presence nor absence can be confirmed',
+      ),
+    );
+    return finish('UNKNOWN');
+  }
   if (!source.trusted) {
     const seen =
       candidates.length === 0
@@ -288,6 +363,14 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
   if (failed) return finish('FAIL');
   if (indeterminate || conflicts.length > 0) return finish('UNKNOWN');
 
+  // The chain is only as complete as its weakest link.
+  const links = [
+    { assessment: source, ids: [...sourceIds], label: `source "${expectation.source}"` },
+    ...hopLinks,
+  ];
+  const weakest = links.find((link) => !link.assessment.completeThroughDeadline);
+  const chainComplete = weakest === undefined;
+
   // 3. Cardinality not yet met: missing, pending, or unknowable.
   const windowOpen = now < deadline;
   if (distinctInWindow < min) {
@@ -299,7 +382,7 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
       });
       return finish('PENDING');
     }
-    if (source.completeThroughDeadline) {
+    if (chainComplete) {
       if (late.length > 0) {
         reasons.push({
           code: 'LATE_OUTCOME',
@@ -318,8 +401,7 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
     }
     return finishIncomplete(
       ctx,
-      source,
-      sourceIds,
+      weakestLink(links),
       deadline,
       reasons,
       finish,
@@ -340,11 +422,10 @@ function evaluateExpectation(ctx: ExpectationContext): ExpectationVerdict {
       });
       return finish('PENDING');
     }
-    if (!source.completeThroughDeadline) {
+    if (!chainComplete) {
       return finishIncomplete(
         ctx,
-        source,
-        sourceIds,
+        weakestLink(links),
         deadline,
         reasons,
         finish,
@@ -408,10 +489,21 @@ function notEvaluated(expectation: Expectation): AggregateSummary[] {
   }));
 }
 
+interface Link {
+  assessment: SourceAssessment;
+  ids: readonly string[];
+  label: string;
+}
+
+function weakestLink(links: readonly Link[]): Link {
+  const weakest = links.find((link) => !link.assessment.completeThroughDeadline);
+  if (weakest === undefined) throw new Error('unreachable: chain is complete');
+  return weakest;
+}
+
 function finishIncomplete(
   ctx: ExpectationContext,
-  source: SourceAssessment,
-  sourceIds: readonly string[],
+  link: Link,
   deadline: number,
   reasons: Reason[],
   finish: (verdict: Verdict) => ExpectationVerdict,
@@ -419,17 +511,19 @@ function finishIncomplete(
   min: number,
 ): ExpectationVerdict {
   const { expectation } = ctx;
+  const { assessment: source, ids: sourceIds } = link;
+  const who = link.label.startsWith('hop') ? `${link.label} source "${source.source}"` : link.label;
   if (source.completeThrough === null) {
     reasons.push({
       code: 'NO_COMPLETENESS_ATTESTATION',
-      message: `source "${expectation.source}" gives no completeness watermark; ${observed} of ${min} required ${expectation.type} observed but absence of further outcomes cannot be confirmed`,
+      message: `${who} gives no completeness watermark; ${observed} of ${min} required ${expectation.type} observed but absence of further outcomes cannot be confirmed`,
       evidenceIds: [...sourceIds],
     });
     return finish('UNKNOWN');
   }
   reasons.push({
     code: 'SOURCE_INCOMPLETE',
-    message: `source "${expectation.source}" is complete only through ${source.completeThrough}${source.watermarkClamped ? ' (watermark clamped to the attestation instant)' : ''}, before the deadline ${toIso(deadline)}; ${observed} of ${min} required ${expectation.type} observed so far`,
+    message: `${who} is complete only through ${source.completeThrough}${source.watermarkClamped ? ' (watermark clamped to the attestation instant)' : ''}, before the deadline ${toIso(deadline)}; ${observed} of ${min} required ${expectation.type} observed so far`,
     evidenceIds: [...sourceIds],
   });
   return finish('PENDING');
@@ -442,9 +536,10 @@ export function evaluateTrigger(
   evidence: EvidenceSet,
   options: EvaluateOptions,
 ): RuleVerdict {
-  if (trigger.canonical.type !== rule.trigger.type) {
+  const types = triggerTypes(rule);
+  if (!types.includes(trigger.canonical.type)) {
     throw new TypeError(
-      `event ${trigger.canonical.eventId} has type "${trigger.canonical.type}" but rule ${rule.id} triggers on "${rule.trigger.type}"`,
+      `event ${trigger.canonical.eventId} has type "${trigger.canonical.type}" but rule ${rule.id} triggers on "${types.join('" | "')}"`,
     );
   }
   if (rule.trigger.source !== undefined && trigger.canonical.source !== rule.trigger.source) {
@@ -472,7 +567,7 @@ export function evaluateTrigger(
             ? [trigger.canonical.eventId]
             : [sourceEvidenceId(rawStatus), trigger.canonical.eventId],
           'trigger',
-          `the ${rule.trigger.type} trigger and its values cannot be trusted, so no PASS or FAIL can be given`,
+          `the ${triggerTypes(rule).join(' | ')} trigger and its values cannot be trusted, so no PASS or FAIL can be given`,
         ),
       );
     }
@@ -523,13 +618,26 @@ export function evaluateRule(
   evidence: EvidenceSet,
   options: EvaluateOptions,
 ): RuleVerdict[] {
-  return evidence
-    .eventsOfType(rule.trigger.type)
+  const triggers = triggerTypes(rule)
+    .flatMap((type) => evidence.eventsOfType(type))
     .filter(
       (trigger) =>
         rule.trigger.source === undefined || trigger.canonical.source === rule.trigger.source,
     )
-    .map((trigger) => evaluateTrigger(rule, trigger, evidence, options));
+    .sort((a, b) => {
+      const byOccurred =
+        toEpochMillis(a.canonical.occurredAt) - toEpochMillis(b.canonical.occurredAt);
+      if (byOccurred !== 0) return byOccurred;
+      const byCollected =
+        toEpochMillis(a.canonical.collectedAt) - toEpochMillis(b.canonical.collectedAt);
+      if (byCollected !== 0) return byCollected;
+      return a.canonical.eventId < b.canonical.eventId
+        ? -1
+        : a.canonical.eventId > b.canonical.eventId
+          ? 1
+          : 0;
+    });
+  return triggers.map((trigger) => evaluateTrigger(rule, trigger, evidence, options));
 }
 
 /** Evaluate many rules; output order is deterministic (rule id, correlation, trigger time, trigger id). */

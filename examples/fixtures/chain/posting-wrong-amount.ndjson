@@ -1,0 +1,7 @@
+# posted for 12.00 instead of 120.00
+{"kind":"source","source":"orders","observedAt":"2026-04-01T08:15:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-04-01T08:15:00.000Z"}
+{"kind":"event","eventId":"evt-order-4001-paid","type":"order.paid","source":"orders","occurredAt":"2026-04-01T08:00:00.000Z","collectedAt":"2026-04-01T08:00:00.100Z","payload":{"orderId":"ord_4001","paymentId":"pay_4001","amount":120.00,"currency":"EUR"}}
+{"kind":"event","eventId":"evt-inv-7001","type":"invoice.created","source":"invoicing","occurredAt":"2026-04-01T08:00:05.000Z","collectedAt":"2026-04-01T08:00:05.200Z","payload":{"invoiceId":"inv_7001","orderId":"ord_4001","amount":120.00,"currency":"EUR"}}
+{"kind":"event","eventId":"evt-post-9001","type":"ledger.posted","source":"ledger","occurredAt":"2026-04-01T08:00:09.000Z","collectedAt":"2026-04-01T08:00:09.300Z","payload":{"postingId":"post_9001","invoiceId":"inv_7001","amount":12.00,"currency":"EUR"}}
+{"kind":"source","source":"invoicing","observedAt":"2026-04-01T08:15:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-04-01T08:15:00.000Z"}
+{"kind":"source","source":"ledger","observedAt":"2026-04-01T08:15:00.000Z","status":"available","authoritative":true,"completeThrough":"2026-04-01T08:15:00.000Z"}

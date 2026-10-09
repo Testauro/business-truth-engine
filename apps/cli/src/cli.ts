@@ -142,7 +142,7 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
       const rules = (await Promise.all(options.rules.map((target) => loadRules(target)))).flat();
       for (const rule of rules) {
         io.stdout(
-          `ok  ${rule.id}@v${rule.version}  trigger=${rule.trigger.type}  expectations=${rule.expectations.length}\n`,
+          `ok  ${rule.id}@v${rule.version}  trigger=${Array.isArray(rule.trigger.type) ? rule.trigger.type.join('|') : rule.trigger.type}  expectations=${rule.expectations.length}\n`,
         );
       }
       io.stdout(`${rules.length} rule(s) valid\n`);

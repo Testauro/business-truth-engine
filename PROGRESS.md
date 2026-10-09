@@ -285,6 +285,18 @@ CI: pushed as `74978b0`; run 37890400497 green in 1.2 min on all four jobs. Both
   all 25 catalogued cases incl. `wrong-invoice-id-format` -> FAIL; scenarios 7/7; E2E 16 passed.
   CLI: `"invoiceId" is "INV-1", expected matches /^inv_[0-9]{4,}$/` citing the invoice and the trigger.
 
+## Multi-trigger correlation (ROADMAP "Later"): COMPLETE (2026-10-09)
+
+- Correlation chains (`correlation.via` hops with from/to paths; hop sources in the trust gate and
+  the completeness ladder; `CORRELATION_HOP` reasons; `correlation` summary on the verdict) and
+  alternative trigger types (`trigger.type: [a, b]`, each evaluated as its own trigger).
+- Example rule `examples/rules/ledger-posting-per-invoice.yaml`; catalogue
+  `examples/fixtures/chain/cases.json` (posted once, posting missing, duplicate, wrong amount,
+  invoice missing, invoicing lagging, invoicing unavailable, reinvoiced trigger).
+- Verification (actual runs): `pnpm verify` with PostgreSQL green: 26 files, 307 tests (22 new);
+  coverage 97.4% statements / 88.0% branches / 97.9% functions / 98.5% lines; `check:cli` passes all
+  33 catalogued cases across three catalogues; scenarios 7/7; E2E 16 passed.
+
 ## What's next
 
 ROADMAP "Later": PostgreSQL evidence store, aggregate assertions, multi-trigger correlation,

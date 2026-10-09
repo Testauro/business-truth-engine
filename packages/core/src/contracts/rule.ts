@@ -154,6 +154,32 @@ export const AggregateSchema = z
   });
 export type Aggregate = z.infer<typeof AggregateSchema>;
 
+/**
+ * One hop in a correlation chain: events of `type` from `source` whose `from`
+ * value is in the current key set contribute their `to` values to the next.
+ */
+export const CorrelationHopSchema = z
+  .object({
+    type: nonEmpty,
+    source: nonEmpty,
+    from: payloadPath,
+    to: payloadPath,
+  })
+  .strict();
+export type CorrelationHop = z.infer<typeof CorrelationHopSchema>;
+
+export const CorrelationSchema = z
+  .object({
+    /** Path on the trigger payload that starts the chain. Defaults to the rule's correlationKey. */
+    trigger: payloadPath.optional(),
+    /** Path on the observation payload matched against the final key set. Defaults to the trigger path. */
+    observation: payloadPath.optional(),
+    /** Intermediate hops, in order. */
+    via: z.array(CorrelationHopSchema).default([]),
+  })
+  .strict();
+export type Correlation = z.infer<typeof CorrelationSchema>;
+
 export const ExpectationSchema = z
   .object({
     /** Stable id for the expectation inside the rule; defaults to `type`. */
@@ -162,8 +188,10 @@ export const ExpectationSchema = z
     type: nonEmpty,
     /** Source that is authoritative for this observation. Events from other sources are ignored. */
     source: nonEmpty,
-    /** Path in the observation payload holding the correlation value. Defaults to the trigger's. */
+    /** Path in the observation payload holding the correlation value. Defaults to the trigger's. Shorthand for `correlation.observation`. */
     correlationKey: payloadPath.optional(),
+    /** Full correlation spec: trigger path, observation path, and intermediate hops. */
+    correlation: CorrelationSchema.optional(),
     /**
      * Path identifying a distinct business outcome (e.g. `invoiceId`).
      * Two observations with different values are two outcomes. Defaults to the
@@ -183,7 +211,11 @@ export const ExpectationSchema = z
     /** Assertions over the whole in-window observation set; see docs/rules.md. */
     aggregates: z.array(AggregateSchema).default([]),
   })
-  .strict();
+  .strict()
+  .refine((e) => !(e.correlationKey !== undefined && e.correlation?.observation !== undefined), {
+    message: 'use either correlationKey or correlation.observation, not both',
+    path: ['correlation', 'observation'],
+  });
 export type Expectation = z.infer<typeof ExpectationSchema>;
 
 export const RuleSchema = z
@@ -193,7 +225,8 @@ export const RuleSchema = z
     description: z.string().optional(),
     trigger: z
       .object({
-        type: nonEmpty,
+        /** Event type, or several alternative types, that start the obligation. */
+        type: z.union([nonEmpty, z.array(nonEmpty).min(1)]),
         /**
          * Source that is authoritative for the trigger. When set, only trigger events from this
          * source are evaluated and the source must be attested available and authoritative;
@@ -250,4 +283,24 @@ export function resolveCardinality(cardinality: Cardinality): ResolvedCardinalit
 
 export function expectationId(expectation: Expectation): string {
   return expectation.id ?? expectation.type;
+}
+
+/** Trigger types as a list, whether the rule names one or several. */
+export function triggerTypes(rule: Rule): readonly string[] {
+  return Array.isArray(rule.trigger.type) ? rule.trigger.type : [rule.trigger.type];
+}
+
+/** Resolved correlation paths and hops for an expectation. */
+export function resolveCorrelation(
+  rule: Rule,
+  expectation: Expectation,
+): { triggerPath: string; observationPath: string; via: readonly CorrelationHop[] } {
+  const triggerPath = expectation.correlation?.trigger ?? rule.trigger.correlationKey;
+  const observationPath =
+    expectation.correlation?.observation ??
+    expectation.correlationKey ??
+    (expectation.correlation?.via.length
+      ? (expectation.correlation.via.at(-1)?.to ?? triggerPath)
+      : triggerPath);
+  return { triggerPath, observationPath, via: expectation.correlation?.via ?? [] };
 }

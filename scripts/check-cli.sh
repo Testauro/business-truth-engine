@@ -33,7 +33,7 @@ if cmp -s "$OUT/repro-1.json" "$OUT/repro-2.json"; then echo "ok   reproducible 
 # Every catalogued fixture (both catalogues) yields its expected verdict (same source of truth as the unit tests).
 node -e '
 const fs=require("fs"),path=require("path"),{execFileSync}=require("child_process");let bad=0;
-for(const file of ["examples/fixtures/cases.json","examples/fixtures/aggregates/cases.json"]){
+for(const file of ["examples/fixtures/cases.json","examples/fixtures/aggregates/cases.json","examples/fixtures/chain/cases.json"]){
   const cat=JSON.parse(fs.readFileSync(file,"utf8"));const dir=path.dirname(file);
   for(const c of cat.cases){
     let out;try{out=execFileSync("node",["apps/cli/dist/main.js","evaluate","-r",cat.rule,"-e",path.join(dir,c.name+".ndjson"),"--now",c.now,"-f","json"],{stdio:["ignore","pipe","ignore"]}).toString()}catch(e){out=e.stdout.toString()}

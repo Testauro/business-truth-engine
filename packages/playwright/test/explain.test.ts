@@ -34,6 +34,12 @@ const verdict: RuleVerdict = {
       deadline: '2026-01-15T10:02:00.000Z',
       windowStart: '2026-01-15T09:59:55.000Z',
       cardinality: { min: 1, max: 1 },
+      correlation: {
+        triggerPath: 'orderId',
+        observationPath: 'orderId',
+        keys: ['"ord_0001"'],
+        hops: [],
+      },
       distinctInWindow: 0,
       observations: [],
       aggregates: [],

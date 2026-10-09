@@ -42,6 +42,34 @@ A field missing on the observation always fails. A `trigger` operand that is mis
 array for `in` / `notIn`, is indeterminate and yields UNKNOWN. Aggregates accept only the ordered
 and equality operators with scalar operands.
 
+## Correlation chains and alternative triggers
+
+Outcomes are not always keyed by the trigger's own id. A ledger posting carries an `invoiceId`,
+not the `orderId` the obligation started from. An expectation can therefore walk a chain:
+
+```yaml
+trigger:
+  type: [order.paid, order.reinvoiced] # one type, or several that start the same obligation
+  source: orders
+  correlationKey: orderId
+expectations:
+  - type: ledger.posted
+    source: ledger
+    correlation:
+      trigger: orderId # path on the trigger (default: the rule's correlationKey)
+      via: # hops, in order; each maps the current key set to the next
+        - { type: invoice.created, source: invoicing, from: orderId, to: invoiceId }
+      observation: invoiceId # path on the observation matched against the final keys
+```
+
+Hop events must fall inside the expectation's window. Every hop source is held to the same
+standard as the expectation's source: unavailable, non-authoritative or unattested hop sources
+make the verdict UNKNOWN, and a hop source whose watermark has not reached the deadline keeps it
+PENDING, so a missing intermediate event is never mistaken for a missing outcome. The verdict
+reports each hop (`CORRELATION_HOP` reason, `correlation.hops[]` with matched events and keys).
+Worked example: `examples/rules/ledger-posting-per-invoice.yaml` with
+`examples/fixtures/chain/`.
+
 ## Aggregate assertions
 
 Per-observation `assertions` judge each outcome on its own. `aggregates` judge the whole set of

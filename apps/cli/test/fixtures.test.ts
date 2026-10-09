@@ -25,7 +25,11 @@ const CatalogueSchema = z.object({
   ),
 });
 
-const CATALOGUES = ['examples/fixtures/cases.json', 'examples/fixtures/aggregates/cases.json'];
+const CATALOGUES = [
+  'examples/fixtures/cases.json',
+  'examples/fixtures/aggregates/cases.json',
+  'examples/fixtures/chain/cases.json',
+];
 const catalogues = await Promise.all(
   CATALOGUES.map(async (file) => ({
     file,

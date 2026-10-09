@@ -1,0 +1,94 @@
+{
+  "$comment": "Correlation-chain catalogue; evaluated with examples/rules/ledger-posting-per-invoice.yaml (10m window from 2026-04-01T08:00Z, deadline 08:10Z).",
+  "rule": "examples/rules/ledger-posting-per-invoice.yaml",
+  "cases": [
+    {
+      "name": "posted-once",
+      "now": "2026-04-01T08:15:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_4001\"",
+          "verdict": "PASS",
+          "reasons": ["CORRELATION_HOP", "OUTCOME_CONFIRMED"]
+        }
+      ]
+    },
+    {
+      "name": "posting-missing",
+      "now": "2026-04-01T08:15:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_4001\"",
+          "verdict": "FAIL",
+          "reasons": ["CORRELATION_HOP", "MISSING_EXPECTED_OUTCOME"]
+        }
+      ]
+    },
+    {
+      "name": "posting-duplicate",
+      "now": "2026-04-01T08:15:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_4001\"",
+          "verdict": "FAIL",
+          "reasons": ["CORRELATION_HOP", "DUPLICATE_OUTCOME"]
+        }
+      ]
+    },
+    {
+      "name": "posting-wrong-amount",
+      "now": "2026-04-01T08:15:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_4001\"",
+          "verdict": "FAIL",
+          "reasons": ["CORRELATION_HOP", "ASSERTION_MISMATCH"]
+        }
+      ]
+    },
+    {
+      "name": "invoice-missing",
+      "now": "2026-04-01T08:15:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_4001\"",
+          "verdict": "FAIL",
+          "reasons": ["CORRELATION_HOP", "MISSING_EXPECTED_OUTCOME"]
+        }
+      ]
+    },
+    {
+      "name": "invoicing-lagging",
+      "now": "2026-04-01T08:15:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_4001\"",
+          "verdict": "PENDING",
+          "reasons": ["CORRELATION_HOP", "SOURCE_INCOMPLETE"]
+        }
+      ]
+    },
+    {
+      "name": "invoicing-unavailable",
+      "now": "2026-04-01T08:15:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_4001\"",
+          "verdict": "UNKNOWN",
+          "reasons": ["CORRELATION_HOP", "SOURCE_UNAVAILABLE"]
+        }
+      ]
+    },
+    {
+      "name": "reinvoiced",
+      "now": "2026-04-01T08:15:00Z",
+      "expected": [
+        {
+          "correlationValue": "\"ord_4001\"",
+          "verdict": "PASS",
+          "reasons": ["CORRELATION_HOP", "OUTCOME_CONFIRMED"]
+        }
+      ]
+    }
+  ]
+}
