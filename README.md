@@ -141,6 +141,17 @@ Faults can be toggled at runtime on `/admin/faults`. The evidence collector only
 orders and invoicing systems of record and attests each read with a completeness watermark; the
 engine never imports the demo.
 
+## Keeping evidence in PostgreSQL
+
+```bash
+node apps/cli/dist/main.js ingest --postgres postgres://bte:bte@127.0.0.1:54329/bte -e bte-report/demo/wrong-amount.ndjson
+node apps/cli/dist/main.js evaluate --rules rules --postgres postgres://bte:bte@127.0.0.1:54329/bte --now 2026-01-15T10:02:31Z
+```
+
+The store is append-only (database triggers refuse updates and deletes), ingest is idempotent,
+every row is re-validated on read, and `--now` doubles as an "as of" cut: only evidence collected by
+then is used. See [ADR 0004](docs/adr/0004-postgres-evidence-store.md).
+
 ## The Playwright proof
 
 `tests/e2e` drives the real checkout UI in Chromium against a demo server started per worker with
@@ -183,6 +194,7 @@ apps/demo             Fastify shop: orders / payments / invoicing, seeded faults
 packages/core         contracts + deterministic evaluator (no I/O)
 packages/rules        YAML rule loading
 packages/evidence     NDJSON evidence I/O
+packages/evidence-postgres  append-only PostgreSQL evidence store
 packages/playwright   BteVerifier for Playwright Test
 rules/                business invariants
 examples/fixtures/    evidence cases + expected verdicts

@@ -10,6 +10,9 @@ node apps/cli/dist/main.js evaluate \
   --junit bte-report/bte.junit.xml \       # JUnit XML
   --markdown bte-report/bte.md \           # Markdown (append to $GITHUB_STEP_SUMMARY)
   --fail-on unknown                        # gate: fail (default) | unknown | pending
+# or from a PostgreSQL store (optionally together with -e files); as-of defaults to --now
+node apps/cli/dist/main.js ingest --postgres postgres://user:pw@host/db -e run.ndjson
+node apps/cli/dist/main.js evaluate --rules rules --postgres postgres://user:pw@host/db --now 2026-01-15T10:03:00Z
 ```
 
 ## Exit codes (the CI contract)

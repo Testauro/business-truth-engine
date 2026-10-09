@@ -51,6 +51,21 @@ jobs:
       fail-fast: false
       matrix:
         node: [24, 26]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bte
+          POSTGRES_PASSWORD: bte
+          POSTGRES_DB: bte
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bte -d bte"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      BTE_TEST_POSTGRES_URL: postgres://bte:bte@127.0.0.1:5432/bte
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

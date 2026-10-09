@@ -1,12 +1,9 @@
 {
-  "name": "@bte/cli",
+  "name": "@bte/evidence-postgres",
   "version": "0.1.0",
-  "description": "Business Truth Engine command line: evaluate business invariants against NDJSON evidence.",
+  "description": "Business Truth Engine evidence store on PostgreSQL: append-only, idempotent ingest, filtered and as-of loading into the core EvidenceSet.",
   "license": "Apache-2.0",
   "type": "module",
-  "bin": {
-    "bte": "./dist/main.js"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -20,16 +17,14 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --root ../.. apps/cli"
+    "test": "vitest run --root ../.. packages/evidence-postgres"
   },
   "dependencies": {
     "@bte/core": "workspace:*",
-    "@bte/evidence": "workspace:*",
-    "@bte/evidence-postgres": "workspace:*",
-    "@bte/rules": "workspace:*",
-    "commander": "^15.0.0"
+    "pg": "^8.23.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "zod": "^4.6.5"
+    "@types/pg": "^8.23.1"
   }
 }

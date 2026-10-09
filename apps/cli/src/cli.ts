@@ -1,4 +1,6 @@
 import { Command, CommanderError, InvalidArgumentError } from 'commander';
+import { readAllEvidence } from '@bte/evidence';
+import { PostgresEvidenceStore, redactConnectionString } from '@bte/evidence-postgres';
 import { loadRules, ruleJsonSchema } from '@bte/rules';
 import type { OutputFormat } from './evaluate-command.js';
 import { runEvaluate } from './evaluate-command.js';
@@ -45,7 +47,14 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
     .command('evaluate')
     .description('Evaluate rules against NDJSON evidence and emit verdicts.')
     .requiredOption('-r, --rules <path...>', 'rule file(s) or directories')
-    .requiredOption('-e, --evidence <file...>', 'NDJSON evidence file(s)')
+    .option('-e, --evidence <file...>', 'NDJSON evidence file(s)')
+    .option('--postgres <url>', 'load evidence from a PostgreSQL store (see `bte ingest`)')
+    .option('--postgres-schema <name>', 'store schema', 'bte')
+    .option(
+      '--collected-until <iso>',
+      'as-of: only store rows collected at or before this instant (default: --now)',
+      parseIso,
+    )
     .option(
       '--now <iso>',
       'evaluation instant (defaults to wall clock; pass for reproducible output)',
@@ -67,7 +76,10 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
     .action(
       async (options: {
         rules: string[];
-        evidence: string[];
+        evidence?: string[];
+        postgres?: string;
+        postgresSchema: string;
+        collectedUntil?: string;
         now?: string;
         format: OutputFormat;
         output?: string;
@@ -80,7 +92,10 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
         }
         const result = await runEvaluate({
           rules: options.rules,
-          evidence: options.evidence,
+          evidence: options.evidence ?? [],
+          postgres: options.postgres,
+          postgresSchema: options.postgresSchema,
+          collectedUntil: options.collectedUntil,
           now: options.now,
           format: options.format,
           output: options.output,
@@ -93,6 +108,31 @@ export function buildProgram(io: CliIo, state: CliState = { exitCode: 0 }): Comm
         state.exitCode = result.exitCode;
       },
     );
+
+  program
+    .command('ingest')
+    .description(
+      'Append NDJSON evidence to a PostgreSQL store (creates the schema if needed). Idempotent.',
+    )
+    .requiredOption('--postgres <url>', 'PostgreSQL connection string')
+    .option('--postgres-schema <name>', 'store schema', 'bte')
+    .requiredOption('-e, --evidence <file...>', 'NDJSON evidence file(s)')
+    .action(async (options: { postgres: string; postgresSchema: string; evidence: string[] }) => {
+      const store = PostgresEvidenceStore.connect(options.postgres, {
+        schema: options.postgresSchema,
+      });
+      try {
+        await store.migrate();
+        const records = await readAllEvidence(options.evidence);
+        const result = await store.appendAll(records);
+        const counts = await store.counts();
+        io.stdout(
+          `ingested ${records.length} record(s) into ${redactConnectionString(options.postgres)} schema ${store.schema}: events +${result.events.inserted} (${result.events.duplicates} already present), sources +${result.sources.inserted} (${result.sources.duplicates} already present); store now holds ${counts.events} events, ${counts.sources} attestations\n`,
+        );
+      } finally {
+        await store.close();
+      }
+    });
 
   program
     .command('validate')

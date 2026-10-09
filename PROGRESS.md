@@ -240,6 +240,21 @@ Verification after fixes (actual runs): build + lint + typecheck + format clean;
 7/7 as catalogued; `test:e2e` 16 passed; `check:demonstration` UI passed and BTE failed with
 MISSING_EXPECTED_OUTCOME.
 
+## PostgreSQL evidence store (ROADMAP "Later"): COMPLETE locally (2026-10-09)
+
+| Check                                        | Command                                                                      | Result                                                                                                                                                  |
+| -------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Store + CLI integration tests (real DB)      | `BTE_TEST_POSTGRES_URL=... pnpm test` against `postgres:17-alpine` in Docker | 16 new tests passed (11 store, 5 CLI); 228 total                                                                                                        |
+| Without a database                           | `pnpm test`                                                                  | the 16 tests skip with a warning; everything else unchanged                                                                                             |
+| Live CLI vs. container                       | scenario -> `bte ingest` twice -> `bte evaluate --postgres`                  | 10 records: +6 events/+4 sources then +0/+0; FAIL DUPLICATE_OUTCOME; as-of `--now 10:00:30` uses only the first collection; `DELETE` refused by trigger |
+| Lint (incl. new boundary), typecheck, format | `pnpm lint`, `pnpm typecheck`, `pnpm format:check`                           | clean                                                                                                                                                   |
+
+Delivered: `packages/evidence-postgres` (schema with append-only triggers, `PostgresEvidenceStore`
+with `migrate` / `appendAll` / `load` / `snapshot` / `counts`, `redactConnectionString`), CLI
+`ingest` and `--postgres` / `--postgres-schema` / `--collected-until`, ADR 0004, docs, CI service.
+
+Not verified here: the CI `services: postgres` job has not run yet (not pushed).
+
 ## What's next
 
 ROADMAP "Later": PostgreSQL evidence store, aggregate assertions, multi-trigger correlation,

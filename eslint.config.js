@@ -102,6 +102,26 @@ export default tseslint.config(
     },
   },
   {
+    files: ['packages/evidence-postgres/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@bte/cli', '@bte/demo', '@bte/playwright', '@bte/rules', '@bte/evidence'],
+              message: 'the store depends on core only.',
+            },
+            {
+              group: ['fastify', 'fastify/*', '@fastify/*', '@playwright/*', 'playwright*'],
+              message: 'no framework code in library packages.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['packages/playwright/src/**/*.ts'],
     rules: {
       'no-restricted-imports': [

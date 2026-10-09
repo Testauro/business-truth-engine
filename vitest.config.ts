@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
+// The PostgreSQL store is only exercised when a database is available (BTE_TEST_POSTGRES_URL).
+const postgresCovered = Boolean(process.env['BTE_TEST_POSTGRES_URL']);
 
 export default defineConfig({
   resolve: {
@@ -9,6 +11,7 @@ export default defineConfig({
       '@bte/core': `${root}packages/core/src/index.ts`,
       '@bte/rules': `${root}packages/rules/src/index.ts`,
       '@bte/evidence': `${root}packages/evidence/src/index.ts`,
+      '@bte/evidence-postgres': `${root}packages/evidence-postgres/src/index.ts`,
       '@bte/playwright': `${root}packages/playwright/src/index.ts`,
     },
   },
@@ -23,6 +26,7 @@ export default defineConfig({
       include: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
       // Process entry points are exercised by the shell-level checks (scripts/, CI), not by vitest.
       exclude: [
+        ...(postgresCovered ? [] : ['packages/evidence-postgres/src/**']),
         'apps/*/src/main.ts',
         'apps/demo/src/scenario.ts',
         'packages/playwright/src/verifier.ts',

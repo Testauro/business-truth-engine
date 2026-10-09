@@ -11,6 +11,9 @@
       "path": "packages/evidence"
     },
     {
+      "path": "packages/evidence-postgres"
+    },
+    {
       "path": "apps/cli"
     },
     {

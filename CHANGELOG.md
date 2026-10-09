@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. The format follows Keep a Changelog;
 versions follow SemVer. Unreleased changes sit at the top.
 
+## [Unreleased]
+
+### Added
+
+- `@bte/evidence-postgres`: append-only PostgreSQL evidence store with idempotent ingest, database
+  triggers refusing updates and deletes, re-validation on read, filters by type / source /
+  correlation, and `collectedUntil` as-of loading (ADR 0004).
+- CLI: `bte ingest --postgres <url> -e <ndjson...>`; `bte evaluate --postgres <url>
+[--postgres-schema <name>] [--collected-until <iso>]`, combinable with `-e`; connection strings
+  are redacted in reports. `--evidence` is now optional when `--postgres` is given.
+- CI: PostgreSQL 17 service on the test job; store tests skip loudly without `BTE_TEST_POSTGRES_URL`.
+
 ## [0.1.0] - 2026-10-09
 
 First release: the deterministic engine, CLI, demo and Playwright integration. CI green on Node

@@ -6,17 +6,18 @@ come only from evidence.
 
 ## Architecture boundaries (enforced; do not cross)
 
-| Package / app         | Owns                                                                                                                   | May depend on                                               |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `packages/core`       | Rule + evidence contracts (Zod), `EvidenceSet` dedup, evaluator, clock                                                 | `zod` only. No I/O, no Node APIs.                           |
-| `packages/rules`      | YAML rule loading / validation                                                                                         | core, `yaml`, Node fs                                       |
-| `packages/evidence`   | NDJSON read/write, in-memory store                                                                                     | core, Node fs                                               |
-| `packages/playwright` | `BteVerifier`: evaluate rules from fetched evidence inside Playwright tests; polling, explanations, report attachments | core, evidence, rules, `@playwright/test` (peer)            |
-| `tests/e2e`           | Playwright suite: per-worker demo server, page objects, `DemoApi`, test data, specs                                    | demo, playwright, rules, `@playwright/test`                 |
-| `apps/cli`            | `bte evaluate / validate / schema`, JSON + text reports                                                                | core, rules, evidence, `commander`                          |
-| `apps/demo`           | Fastify shop: orders, payments, invoicing modules, seeded faults, read-only `EvidenceCollector`                        | core (contracts), evidence, fastify; never imported by core |
-| `rules/`              | Versioned business invariants (YAML)                                                                                   |                                                             |
-| `examples/fixtures/`  | NDJSON evidence cases + `cases.json` expected verdicts                                                                 |                                                             |
+| Package / app                | Owns                                                                                                                   | May depend on                                               |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `packages/core`              | Rule + evidence contracts (Zod), `EvidenceSet` dedup, evaluator, clock                                                 | `zod` only. No I/O, no Node APIs.                           |
+| `packages/rules`             | YAML rule loading / validation                                                                                         | core, `yaml`, Node fs                                       |
+| `packages/evidence`          | NDJSON read/write, in-memory store                                                                                     | core, Node fs                                               |
+| `packages/evidence-postgres` | append-only PostgreSQL store, idempotent ingest, filtered / as-of loading                                              | core, `pg`                                                  |
+| `packages/playwright`        | `BteVerifier`: evaluate rules from fetched evidence inside Playwright tests; polling, explanations, report attachments | core, evidence, rules, `@playwright/test` (peer)            |
+| `tests/e2e`                  | Playwright suite: per-worker demo server, page objects, `DemoApi`, test data, specs                                    | demo, playwright, rules, `@playwright/test`                 |
+| `apps/cli`                   | `bte evaluate / validate / schema`, JSON + text reports                                                                | core, rules, evidence, `commander`                          |
+| `apps/demo`                  | Fastify shop: orders, payments, invoicing modules, seeded faults, read-only `EvidenceCollector`                        | core (contracts), evidence, fastify; never imported by core |
+| `rules/`                     | Versioned business invariants (YAML)                                                                                   |                                                             |
+| `examples/fixtures/`         | NDJSON evidence cases + `cases.json` expected verdicts                                                                 |                                                             |
 
 The core engine must stay independent of Playwright, Fastify, storage, and LLM clients.
 Adapters talk to core only through the typed contracts in `packages/core/src/contracts`.
@@ -44,6 +45,7 @@ npx --yes pnpm@10 test             # vitest (unit + property + fixture tests)
 npx --yes pnpm@10 test:coverage    # same with coverage thresholds (bte-report/coverage)
 npx --yes pnpm@10 check:cli        # built CLI vs fixtures: verdicts, exit codes, reproducibility
 npx --yes pnpm@10 check:scenarios  # every demo fault -> NDJSON -> CLI, verdict asserted
+BTE_TEST_POSTGRES_URL=postgres://bte:bte@127.0.0.1:54329/bte npx --yes pnpm@10 test   # include the store tests
 npx --yes pnpm@10 format:check     # prettier
 npx --yes pnpm@10 test:e2e         # Playwright suite (needs `pnpm build` first; chromium headless shell cached)
 npx --yes pnpm@10 test:e2e:demonstration   # the deliberate UI-passes / BTE-fails pair; exits 1 by design

@@ -11,6 +11,7 @@
       "@bte/core": ["./packages/core/src/index.ts"],
       "@bte/rules": ["./packages/rules/src/index.ts"],
       "@bte/evidence": ["./packages/evidence/src/index.ts"],
+      "@bte/evidence-postgres": ["./packages/evidence-postgres/src/index.ts"],
       "@bte/playwright": ["./packages/playwright/src/index.ts"]
     }
   },

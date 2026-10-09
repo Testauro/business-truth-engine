@@ -7,6 +7,18 @@
 - For the Playwright suite: Chromium headless shell. `pnpm --filter @bte/e2e exec playwright install chromium --only-shell`
   downloads it into Playwright's user cache (outside the repo).
 
+## Optional: PostgreSQL
+
+The `@bte/evidence-postgres` tests and the `bte ingest` / `--postgres` commands need a database.
+Any PostgreSQL 14+ works; a disposable one:
+
+```bash
+docker run -d --name bte-pg -e POSTGRES_PASSWORD=bte -e POSTGRES_USER=bte -e POSTGRES_DB=bte -p 54329:5432 postgres:17-alpine
+export BTE_TEST_POSTGRES_URL=postgres://bte:bte@127.0.0.1:54329/bte
+```
+
+Without the variable the store tests are skipped with a warning and excluded from coverage.
+
 ## First run
 
 ```bash
@@ -34,6 +46,8 @@ node apps/cli/dist/main.js evaluate -r rules -e examples/fixtures/duplicate-invo
 | `pnpm verify`                                                 | everything above except the demonstration                                          |
 | `pnpm demo:start`                                             | live demo on `BTE_DEMO_PORT` (see `.env.example`)                                  |
 | `pnpm demo:scenario -- --fault wrong-amount --out out.ndjson` | one in-process checkout with a seeded fault                                        |
+| `bte ingest --postgres <url> -e <ndjson...>`                  | append evidence to a PostgreSQL store, idempotently                                |
+| `bte evaluate --postgres <url> [--collected-until <iso>]`     | evaluate from the store, as of `--now` by default                                  |
 
 Reports land in `bte-report/` (git-ignored): CLI outputs, coverage, Playwright HTML, JUnit, traces.
 
