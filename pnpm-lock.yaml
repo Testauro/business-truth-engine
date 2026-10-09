@@ -59,6 +59,9 @@ importers:
       '@bte/rules':
         specifier: workspace:*
         version: link:../../packages/rules
+      '@bte/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       commander:
         specifier: ^15.0.0
         version: 15.0.0

@@ -297,6 +297,30 @@ CI: pushed as `74978b0`; run 37890400497 green in 1.2 min on all four jobs. Both
   coverage 97.4% statements / 88.0% branches / 97.9% functions / 98.5% lines; `check:cli` passes all
   33 catalogued cases across three catalogues; scenarios 7/7; E2E 16 passed.
 
+## Reusable product (integration SDK, adapters, consumer): COMPLETE locally (2026-10-09)
+
+| Check                                                                               | Result                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Audit                                                                               | `REUSABILITY_GAP_ANALYSIS.md` (11 gaps with code evidence), `INTEGRATION_ROADMAP.md` (I1–I8)                                                                                                                                                                                                                                                                             |
+| Unit / integration tests                                                            | 31 files, 339 passed (54 new: adapters, mapping, SDK config/env/sources, HTTP adapter, fixtures, CLI init/verify/explain)                                                                                                                                                                                                                                                |
+| Coverage                                                                            | thresholds met (85.3% branches)                                                                                                                                                                                                                                                                                                                                          |
+| Lint (incl. new boundaries for sdk / evidence-http), typecheck, format              | clean                                                                                                                                                                                                                                                                                                                                                                    |
+| Demo E2E migrated to `createBteFixtures` + `bte.config.ts` over the demo's JSON API | 16 passed; demonstration gate still fails for the right reason                                                                                                                                                                                                                                                                                                           |
+| Packaging                                                                           | `scripts/pack.sh`: 8 tarballs, each checked for `dist/index.js`, `.d.ts`, no `src/`; CLI bin present                                                                                                                                                                                                                                                                     |
+| Independent consumer `examples/learning-platform`                                   | `npm install` from `file:` tarballs only (no `workspace:` left, entry points resolve to `node_modules/@bte/*/dist`); imports only `@bte/sdk` and `@bte/playwright`; typecheck clean; 6 Playwright tests passed: PASS, FAIL (missing access), FAIL (wrong course), PENDING → late FAIL, UNKNOWN (access API down), and `bte verify` / `bte explain` via the installed bin |
+| Original order/invoice example                                                      | unchanged and green (`check:scenarios` 7/7, E2E 16/16)                                                                                                                                                                                                                                                                                                                   |
+
+Defects found and fixed while proving portability:
+
+- Playwright rejects fixture functions whose first parameter is not a destructuring pattern; the
+  factory now uses `({}, use)`.
+- A mapping template with a missing placeholder produced a truncated id; templates are now strict.
+- The consumer needed `@bte/sdk` declared explicitly for `bte.config.ts` to import it, which is
+  the documented install list.
+
+Not verified here: CI for the consumer job (added to the workflow, not yet pushed); registry
+publication (not configured; approval required).
+
 ## What's next
 
 ROADMAP "Later": PostgreSQL evidence store, aggregate assertions, multi-trigger correlation,

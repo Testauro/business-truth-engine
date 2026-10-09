@@ -1,0 +1,26 @@
+# Business invariant for Learn.io: once an enrollment is confirmed, the learner must be granted
+# access to exactly that course within 60 seconds.
+id: course-access-after-enrollment
+version: 1
+description: A confirmed enrollment grants the learner access to the enrolled course, once, within 60 seconds.
+trigger:
+  type: enrollment.confirmed
+  source: lms-enrollments
+  correlationKey: enrollmentId
+expectations:
+  - id: access
+    type: access.granted
+    source: lms-access
+    correlationKey: enrollmentId
+    distinctBy: accessId
+    window:
+      within: 60s
+    cardinality: exactly-one
+    assertions:
+      - field: courseId
+        op: equals
+        expected: { trigger: courseId }
+        description: access is for the enrolled course
+      - field: learnerId
+        op: equals
+        expected: { trigger: learnerId }

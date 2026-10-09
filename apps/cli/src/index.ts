@@ -20,3 +20,9 @@ export {
   summarize,
 } from './report.js';
 export type { EvaluationReport, EvidenceReference, FailOn } from './report.js';
+export { runInit } from './commands/init.js';
+export type { InitOptions, InitResult } from './commands/init.js';
+export { runVerify } from './commands/verify.js';
+export type { VerifyCommandOptions, VerifyCommandResult } from './commands/verify.js';
+export { explainText, runExplain } from './commands/explain.js';
+export type { ExplainOptions } from './commands/explain.js';

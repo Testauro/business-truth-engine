@@ -13,6 +13,9 @@ come only from evidence.
 | `packages/evidence`          | NDJSON read/write, in-memory store                                                                                     | core, Node fs                                               |
 | `packages/evidence-postgres` | append-only PostgreSQL store, idempotent ingest, filtered / as-of loading                                              | core, `pg`                                                  |
 | `packages/playwright`        | `BteVerifier`: evaluate rules from fetched evidence inside Playwright tests; polling, explanations, report attachments | core, evidence, rules, `@playwright/test` (peer)            |
+| `packages/sdk`               | public SDK: defineRule/defineConfig, config loader (env, .env), source registry, verify                                | core, rules, evidence, evidence-http                        |
+| `packages/evidence-http`     | REST adapter: auth from env, mapping, completeness attestation                                                         | core                                                        |
+| `examples/learning-platform` | independent consumer (third party); installs BTE from dist-packages/*.tgz only; never edit BTE core for it             | own package.json                                            |
 | `tests/e2e`                  | Playwright suite: per-worker demo server, page objects, `DemoApi`, test data, specs                                    | demo, playwright, rules, `@playwright/test`                 |
 | `apps/cli`                   | `bte evaluate / validate / schema`, JSON + text reports                                                                | core, rules, evidence, `commander`                          |
 | `apps/demo`                  | Fastify shop: orders, payments, invoicing modules, seeded faults, read-only `EvidenceCollector`                        | core (contracts), evidence, fastify; never imported by core |
@@ -51,6 +54,8 @@ npx --yes pnpm@10 test:e2e         # Playwright suite (needs `pnpm build` first;
 npx --yes pnpm@10 test:e2e:demonstration   # the deliberate UI-passes / BTE-fails pair; exits 1 by design
 npx --yes pnpm@10 check:demonstration      # runs it and asserts from JUnit that it failed for the right reason
 npx --yes pnpm@10 verify:quick     # lint + typecheck + test (inner loop)
+npx --yes pnpm@10 pack:packages    # dist-packages/*.tgz for consumers
+(cd examples/learning-platform && npm install && npx playwright test)   # consumer acceptance
 npx --yes pnpm@10 verify           # the full gate: lint, typecheck, format, coverage, check:cli, check:scenarios, e2e
 node apps/cli/dist/main.js evaluate -r rules -e examples/fixtures/duplicate-invoice.ndjson --now 2026-01-15T10:03:00Z
 # demo: in-process scenario -> NDJSON -> CLI

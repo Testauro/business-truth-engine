@@ -5,7 +5,22 @@ versions follow SemVer. Unreleased changes sit at the top.
 
 ## [Unreleased]
 
-### Added
+### Added (reusable product)
+
+- `@bte/sdk`: public entry point with `defineRule`, `defineConfig`, `loadBteConfig`
+  (`bte.config.{ts,mts,mjs,js,json}`, `${ENV}` interpolation, git-ignored `.env`),
+  `resolveSources`, `verify`.
+- Core `EvidenceSource` adapter contract, `collectAll` (a throwing source becomes an
+  `unavailable` attestation), `attestation`, and the pure `mapItems` field mapping.
+- `@bte/evidence-http`: REST adapter with bearer/basic/header auth from the environment,
+  correlation substitution, snapshot or none completeness.
+- `@bte/playwright`: `createBteFixtures` / `createBte` with `bte.correlate`, `collect`,
+  `expectInvariant`; consumer Playwright configs untouched.
+- CLI: `bte init`, `bte verify` (config-driven, reports, `--correlation`), `bte explain`,
+  `bte rules validate`.
+- `pnpm pack:packages` tarballs; independent consumer `examples/learning-platform` installed only
+  from tarballs with PASS / FAIL / PENDING / UNKNOWN Playwright tests and a CLI test.
+- Guides under `docs/guides/`; `REUSABILITY_GAP_ANALYSIS.md`, `INTEGRATION_ROADMAP.md`.
 
 - Correlation chains: `expectation.correlation { trigger, observation, via: [{ type, source,
 from, to }] }` lets an outcome be reached through intermediate events, with every hop source

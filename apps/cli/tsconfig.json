@@ -19,6 +19,9 @@
     },
     {
       "path": "../../packages/evidence-postgres"
+    },
+    {
+      "path": "../../packages/sdk"
     }
   ]
 }

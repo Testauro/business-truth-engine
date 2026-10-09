@@ -180,3 +180,47 @@ describe('defineRule', () => {
     ).toThrow(/invalid rule "Bad Id":[\s\S]*id:[\s\S]*version/);
   });
 });
+
+describe('ndjsonSource and postgres source config', () => {
+  it('ndjsonSource replays files verbatim', async () => {
+    const { ndjsonSource } = await import('../src/index.js');
+    const dir = await scratch({
+      'a.ndjson':
+        '{"kind":"source","source":"x","observedAt":"2026-01-01T00:00:00Z","status":"available","authoritative":true}\n',
+    });
+    const source = ndjsonSource('files', [path.join(dir, 'a.ndjson')]);
+    expect((await source.collect({ now: 0 })).map((r) => r.kind)).toEqual(['source']);
+  });
+
+  it.skipIf(!process.env['BTE_TEST_POSTGRES_URL'])(
+    'postgres source loads as-of the evaluation instant',
+    async () => {
+      const url = process.env['BTE_TEST_POSTGRES_URL'] ?? '';
+      const dir = await scratch({
+        'bte.config.json': JSON.stringify({
+          rules: ['r'],
+          sources: [{ type: 'postgres', name: 'store', url, schema: 'bte_sdk_test' }],
+        }),
+      });
+      const { PostgresEvidenceStore } = await import('@bte/evidence-postgres');
+      const store = PostgresEvidenceStore.connect(url, { schema: 'bte_sdk_test' });
+      try {
+        await store.migrate();
+        await store.append({
+          kind: 'source',
+          source: 'x',
+          observedAt: '2026-01-15T10:00:00.000Z',
+          status: 'available',
+          authoritative: true,
+        });
+        const [source] = await resolveSources(await loadBteConfig({ cwd: dir, env: {} }));
+        expect(source?.name).toBe('store');
+        expect(await source?.collect({ now: Date.parse('2026-01-15T09:00:00Z') })).toEqual([]);
+        expect(await source?.collect({ now: Date.parse('2026-01-15T11:00:00Z') })).toHaveLength(1);
+      } finally {
+        await store.destroy();
+        await store.close();
+      }
+    },
+  );
+});

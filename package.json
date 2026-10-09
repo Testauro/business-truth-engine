@@ -29,7 +29,8 @@
     "check:scenarios": "bash scripts/check-demo-scenarios.sh",
     "check:cli": "bash scripts/check-cli.sh",
     "verify:quick": "pnpm build && pnpm lint && pnpm typecheck && pnpm test",
-    "check:demonstration": "bash scripts/check-demonstration.sh"
+    "check:demonstration": "bash scripts/check-demonstration.sh",
+    "pack:packages": "bash scripts/pack.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

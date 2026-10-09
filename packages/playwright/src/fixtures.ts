@@ -157,7 +157,8 @@ export function createBteFixtures(options: BteFixtureOptions = {}): {
 } {
   return {
     bteState: [
-      async (_args, use) => {
+      // eslint-disable-next-line no-empty-pattern
+      async ({}, use) => {
         await use(await loadBteWorkerState(options));
       },
       { scope: 'worker' },

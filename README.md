@@ -8,7 +8,27 @@ downstream invoice is missing, duplicated, or has the wrong amount. The ordinary
 is green. BTE independently verifies the approved business invariant from evidence and says
 `FAIL`, with the rule id and evidence ids that prove it.
 
-## Quickstart
+## Use it in your own application
+
+BTE is domain-agnostic. Install the packages, point a config at your application's APIs, write
+your invariants, and verify from Playwright or the CLI, without touching BTE's source:
+
+```bash
+npx bte init                 # bte.config.ts, an example rule, .env.example
+npx bte rules validate
+npx bte verify               # collects over HTTP (env-based auth), evaluates, reports, exit code gates CI
+npx bte explain <ruleId> <correlationValue>
+```
+
+Guides: [Installation](docs/guides/INSTALLATION.md) · [Quickstart](docs/guides/QUICKSTART.md) ·
+[Application integration](docs/guides/APPLICATION_INTEGRATION.md) ·
+[Custom adapters](docs/guides/CUSTOM_ADAPTER_GUIDE.md) ·
+[Playwright integration](docs/guides/PLAYWRIGHT_INTEGRATION.md) ·
+[Business rules](docs/guides/BUSINESS_RULES_GUIDE.md).
+A complete third-party example, an online learning platform installed only from packed tarballs,
+lives in [`examples/learning-platform`](examples/learning-platform).
+
+## Quickstart (this repository)
 
 ```bash
 git clone <this repo> && cd business-truth-engine

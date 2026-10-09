@@ -27,6 +27,7 @@
     "@bte/evidence": "workspace:*",
     "@bte/evidence-postgres": "workspace:*",
     "@bte/rules": "workspace:*",
+    "@bte/sdk": "workspace:*",
     "commander": "^15.0.0"
   },
   "devDependencies": {

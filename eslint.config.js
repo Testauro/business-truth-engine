@@ -13,6 +13,9 @@ export default tseslint.config(
       '**/bte-report/**',
       '**/test-results/**',
       '**/playwright-report/**',
+      '**/dist-packages/**',
+      // Independent consumer projects have their own tooling.
+      'examples/*/**',
     ],
   },
   js.configs.recommended,

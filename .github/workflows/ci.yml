@@ -141,3 +141,45 @@ jobs:
             bte-report/e2e-results/**/trace.zip
             bte-report/e2e-results/**/*.png
           if-no-files-found: ignore
+
+  consumer:
+    name: Independent consumer (learning platform) from packed tarballs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Pack every public package
+        run: pnpm pack:packages
+      - name: Install the consumer from tarballs only (no workspace links)
+        working-directory: examples/learning-platform
+        run: |
+          npm install --no-audit --no-fund
+          test -z "$(grep -l 'workspace:' node_modules/@bte/*/package.json || true)"
+          node -e "console.log(require.resolve('@bte/sdk'))" | grep -q node_modules/@bte/sdk/dist
+          npx tsc -p tsconfig.json
+      - name: Install Playwright browser for the consumer
+        working-directory: examples/learning-platform
+        run: npx playwright install --with-deps chromium --only-shell
+      - name: Consumer Playwright tests (PASS / FAIL / PENDING / UNKNOWN + CLI)
+        working-directory: examples/learning-platform
+        run: npx playwright test
+      - name: Consumer CLI smoke (rules validate from the installed bin)
+        working-directory: examples/learning-platform
+        run: npx bte rules validate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: consumer-report
+          path: |
+            examples/learning-platform/playwright-report
+            examples/learning-platform/bte-report
+          if-no-files-found: ignore

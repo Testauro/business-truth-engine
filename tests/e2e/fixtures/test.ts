@@ -38,8 +38,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   ],
   // bteState must see BTE_DEMO_BASE_URL, so it depends on demoServer.
   bteState: [
-    async ({ demoServer }, use) => {
-      void demoServer;
+    async ({ demoServer: _server }, use) => {
       await bteFixtures.bteState[0]({}, use);
     },
     { scope: 'worker' },
