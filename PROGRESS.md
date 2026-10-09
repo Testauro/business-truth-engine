@@ -318,10 +318,16 @@ Defects found and fixed while proving portability:
 - The consumer needed `@bte/sdk` declared explicitly for `bte.config.ts` to import it, which is
   the documented install list.
 
-Not verified here: CI for the consumer job (added to the workflow, not yet pushed); registry
-publication (not configured; approval required).
+CI for the consumer job: verified green (run 37895436002). Registry publication: not configured;
+approval required.
 
 ## OrangeHRM consumer (external application): COMPLETE for the read-only scope (2026-10-09)
+
+CI: pushed as `e613ef7`; that run was rejected at parse time because the `secrets` context was used
+in a step condition. Fixed in `e88832e` (secrets mapped through job env); run 37923296648 green on all
+six jobs in 1.6 min. The OrangeHRM job validated 3 rules and ran the 22 contract/offline tests on
+the runner; its public-demo step is skipped until `ORANGEHRM_USERNAME` / `ORANGEHRM_PASSWORD` exist
+as repository secrets.
 
 | Check                                                    | Result                                                                                                                                                                            |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
