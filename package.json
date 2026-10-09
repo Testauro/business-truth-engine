@@ -12,7 +12,7 @@
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "clean": "rm -rf packages/*/dist apps/*/dist packages/*/tsconfig.tsbuildinfo apps/*/tsconfig.tsbuildinfo",
-    "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.test.json --noEmit",
+    "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.test.json --noEmit && tsc -p tests/e2e/tsconfig.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -20,9 +20,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bte": "node apps/cli/dist/main.js",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm format:check && pnpm test:e2e",
     "demo:start": "node apps/demo/dist/main.js",
-    "demo:scenario": "node apps/demo/dist/scenario.js"
+    "demo:scenario": "node apps/demo/dist/scenario.js",
+    "test:e2e": "pnpm --filter @bte/e2e test",
+    "test:e2e:demonstration": "pnpm --filter @bte/e2e test:demonstration"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

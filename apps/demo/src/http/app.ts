@@ -1,5 +1,5 @@
 import formbody from '@fastify/formbody';
-import type { Clock } from '@bte/core';
+import type { Clock, ManualClock } from '@bte/core';
 import { toIso } from '@bte/core';
 import { toNdjsonLine } from '@bte/evidence';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -16,6 +16,8 @@ import { renderCheckout, renderFaults, renderOrder } from './views.js';
 
 export interface DemoOptions {
   clock: Clock;
+  /** When given, `/admin/clock/advance` moves this clock (test/demo time control). */
+  manualClock?: ManualClock;
   faults?: readonly Fault[];
   logger?: boolean;
 }
@@ -41,6 +43,7 @@ const CheckoutFormSchema = z
 const OrderIdParams = z.object({ orderId: z.string().min(1) });
 const InvoiceQuery = z.object({ orderId: z.string().min(1).optional() });
 const FaultsBody = z.object({ faults: z.union([z.array(z.string()), z.string()]).optional() });
+const AdvanceBody = z.object({ ms: z.number().int().min(0).max(86_400_000) });
 
 function faultsFromBody(body: unknown): Fault[] {
   const parsed = FaultsBody.parse(body);
@@ -184,6 +187,24 @@ export function buildDemo(options: DemoOptions): DemoApp {
   app.put('/admin/faults', (request) => {
     faults.set(faultsFromBody(request.body));
     return { active: faults.list() };
+  });
+
+  app.get('/admin/clock', () => ({
+    now: toIso(clock.now()),
+    controllable: options.manualClock !== undefined,
+  }));
+
+  app.post('/admin/clock/advance', (request, reply) => {
+    const manual = options.manualClock;
+    if (manual === undefined) {
+      return reply
+        .code(409)
+        .send({ error: 'clock is not controllable; start the demo with BTE_DEMO_CLOCK=manual' });
+    }
+    const { ms } = AdvanceBody.parse(request.body);
+    manual.advance(ms);
+    const issued = invoicing.tick();
+    return { now: toIso(manual.now()), advancedMs: ms, invoicesIssued: issued };
   });
 
   app.get('/admin/state', () => ({

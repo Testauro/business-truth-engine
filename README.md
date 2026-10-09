@@ -124,6 +124,40 @@ Faults can be toggled at runtime on `/admin/faults`. The evidence collector only
 orders and invoicing systems of record and attests each read with a completeness watermark; the
 engine never imports the demo.
 
+## The Playwright proof
+
+`tests/e2e` drives the real checkout UI in Chromium against a demo server started per worker with
+a controllable clock. `packages/playwright` adds a `bte` fixture that fetches the evidence the demo
+collected, runs the unmodified engine, and polls until the verdict settles, never sleeping.
+
+```ts
+const order = await checkout.submit();
+await order.expectPaymentReceived(50.97); // the ordinary UI assertion: passes
+await api.advanceClock(121_000); // reach the 120s deadline without waiting
+await bte.expectInvariant('invoice-created-once', await order.orderId()); // FAILs when the invoice is missing
+```
+
+```bash
+npx --yes pnpm@10 build
+npx --yes pnpm@10 test:e2e                 # 16 gated tests: UI, API, business-truth matrix
+npx --yes pnpm@10 test:e2e:demonstration   # 2 tests on one seeded missing invoice: UI passes, BTE fails
+```
+
+The demonstration's failure reads:
+
+```
+VerdictError: expected BTE verdict PASS but got FAIL
+BTE FAIL: rule invoice-created-once@v1 for orderId="ord_0002"
+  trigger order.paid order.paid:ord_0002:pay_0002 at 2026-01-15T10:00:00.000Z; evaluated at 2026-01-15T10:02:01.000Z
+  expectation "invoice" (invoice.created): FAIL; 0 distinct in window; deadline 2026-01-15T10:02:00.000Z; source invoicing (available, authoritative, complete through 2026-01-15T10:02:01.000Z)
+  - MISSING_EXPECTED_OUTCOME: 0 of 1 required invoice.created observed by 2026-01-15T10:02:00.000Z; ... [evidence: source:invoicing@2026-01-15T10:02:01.000Z, order.paid:ord_0002:pay_0002]
+```
+
+with the verdict JSON, the explanation, the evidence NDJSON, a screenshot and a Playwright trace
+attached to the report (`bte-report/e2e-html`). PENDING and UNKNOWN are explicit outcomes:
+`settle` fails with the last verdict if the window never closes, and `expectInvariant` fails on
+UNKNOWN rather than treating "no error seen" as success.
+
 ## Repository layout
 
 ```
@@ -132,10 +166,10 @@ apps/demo             Fastify shop: orders / payments / invoicing, seeded faults
 packages/core         contracts + deterministic evaluator (no I/O)
 packages/rules        YAML rule loading
 packages/evidence     NDJSON evidence I/O
-packages/playwright   (Milestone C) Playwright fixtures
+packages/playwright   BteVerifier for Playwright Test
 rules/                business invariants
 examples/fixtures/    evidence cases + expected verdicts
-tests/e2e             (Milestone C) Playwright demonstration
+tests/e2e             Playwright suite: page objects, DemoApi, fixtures, specs
 docs/                 ADRs and guides
 ```
 

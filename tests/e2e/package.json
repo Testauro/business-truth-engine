@@ -1,0 +1,21 @@
+{
+  "name": "@bte/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Playwright end-to-end suite: drives the demo checkout UI and independently verifies business outcomes with BTE.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:demonstration": "playwright test --grep @demonstration",
+    "report": "playwright show-report ../../bte-report/e2e-html"
+  },
+  "dependencies": {
+    "@bte/core": "workspace:*",
+    "@bte/demo": "workspace:*",
+    "@bte/playwright": "workspace:*",
+    "@bte/rules": "workspace:*",
+    "@playwright/test": "^1.64.0",
+    "zod": "^4.6.5"
+  }
+}

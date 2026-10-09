@@ -26,13 +26,15 @@ system boundaries from evidence, independently of whether the UI test passed.
 - 34 Vitest integration tests (Fastify inject): HTTP behaviour, collector contract, and the
   fault-to-verdict matrix evaluated with the real rule through `@bte/core`.
 
-## Milestone C — Playwright demonstration
+## Milestone C — Playwright demonstration (DONE, see PROGRESS.md)
 
-- `packages/playwright`: fixtures that start/attach to the demo, run the checkout, collect
-  evidence, and expose `bte.expectInvariant(ruleId, correlation, { by })` with polling that
-  stops on PASS/FAIL (no sleeps) and surfaces PENDING/UNKNOWN as explicit outcomes.
-- `tests/e2e`: (1) the ordinary checkout test that passes even with a seeded invoice fault;
-  (2) the BTE test that fails on the same run with a traceable verdict. Traces on failure.
+- `packages/playwright`: `BteVerifier` (evaluate / settle / expectVerdict / expectInvariant) over an
+  HTTP evidence source and the SUT's clock; `expect.poll`-based settling with explicit PENDING and
+  UNKNOWN outcomes; verdict, explanation and evidence attached to the Playwright report.
+- `tests/e2e`: per-worker in-process demo server with controllable clock, `CheckoutPage` /
+  `OrderPage`, typed `DemoApi`, test data, 16 gated specs (UI, API, business-truth matrix) and the
+  `@demonstration` pair where the UI test passes and the BTE test fails by design. Traces retained
+  on failure, HTML + JUnit reports under `bte-report/`.
 
 ## Milestone D — Reports, CI gating, docs, OSS hygiene
 

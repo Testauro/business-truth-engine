@@ -54,6 +54,15 @@ jobs:
           check delayed-invoice FAIL=1
           check invoicing-unavailable UNKNOWN=1
           check duplicate-delivery PASS=1
+      - name: Install Playwright browser
+        run: pnpm --filter @bte/e2e exec playwright install --with-deps chromium --only-shell
+      - name: Playwright gated suite
+        run: pnpm test:e2e
+      - name: Playwright demonstration (UI passes, BTE fails by design; must exit non-zero)
+        run: |
+          if pnpm test:e2e:demonstration; then
+            echo "demonstration unexpectedly passed: BTE did not flag the missing invoice" >&2; exit 1
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:

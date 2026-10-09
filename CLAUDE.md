@@ -6,16 +6,17 @@ come only from evidence.
 
 ## Architecture boundaries (enforced; do not cross)
 
-| Package / app         | Owns                                                                                            | May depend on                                               |
-| --------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `packages/core`       | Rule + evidence contracts (Zod), `EvidenceSet` dedup, evaluator, clock                          | `zod` only. No I/O, no Node APIs.                           |
-| `packages/rules`      | YAML rule loading / validation                                                                  | core, `yaml`, Node fs                                       |
-| `packages/evidence`   | NDJSON read/write, in-memory store                                                              | core, Node fs                                               |
-| `packages/playwright` | (Milestone C) fixtures that record evidence from Playwright tests                               | core, evidence, `@playwright/test`                          |
-| `apps/cli`            | `bte evaluate / validate / schema`, JSON + text reports                                         | core, rules, evidence, `commander`                          |
-| `apps/demo`           | Fastify shop: orders, payments, invoicing modules, seeded faults, read-only `EvidenceCollector` | core (contracts), evidence, fastify; never imported by core |
-| `rules/`              | Versioned business invariants (YAML)                                                            |                                                             |
-| `examples/fixtures/`  | NDJSON evidence cases + `cases.json` expected verdicts                                          |                                                             |
+| Package / app         | Owns                                                                                                                   | May depend on                                               |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `packages/core`       | Rule + evidence contracts (Zod), `EvidenceSet` dedup, evaluator, clock                                                 | `zod` only. No I/O, no Node APIs.                           |
+| `packages/rules`      | YAML rule loading / validation                                                                                         | core, `yaml`, Node fs                                       |
+| `packages/evidence`   | NDJSON read/write, in-memory store                                                                                     | core, Node fs                                               |
+| `packages/playwright` | `BteVerifier`: evaluate rules from fetched evidence inside Playwright tests; polling, explanations, report attachments | core, evidence, rules, `@playwright/test` (peer)            |
+| `tests/e2e`           | Playwright suite: per-worker demo server, page objects, `DemoApi`, test data, specs                                    | demo, playwright, rules, `@playwright/test`                 |
+| `apps/cli`            | `bte evaluate / validate / schema`, JSON + text reports                                                                | core, rules, evidence, `commander`                          |
+| `apps/demo`           | Fastify shop: orders, payments, invoicing modules, seeded faults, read-only `EvidenceCollector`                        | core (contracts), evidence, fastify; never imported by core |
+| `rules/`              | Versioned business invariants (YAML)                                                                                   |                                                             |
+| `examples/fixtures/`  | NDJSON evidence cases + `cases.json` expected verdicts                                                                 |                                                             |
 
 The core engine must stay independent of Playwright, Fastify, storage, and LLM clients.
 Adapters talk to core only through the typed contracts in `packages/core/src/contracts`.
@@ -41,12 +42,15 @@ npx --yes pnpm@10 typecheck        # strict build + test typecheck
 npx --yes pnpm@10 lint             # eslint (type-aware)
 npx --yes pnpm@10 test             # vitest (unit + property + fixture tests)
 npx --yes pnpm@10 format:check     # prettier
-npx --yes pnpm@10 verify           # all of the above
+npx --yes pnpm@10 test:e2e         # Playwright suite (needs `pnpm build` first; chromium headless shell cached)
+npx --yes pnpm@10 test:e2e:demonstration   # the deliberate UI-passes / BTE-fails pair; exits 1 by design
+npx --yes pnpm@10 verify           # all of the above incl. e2e
 node apps/cli/dist/main.js evaluate -r rules -e examples/fixtures/duplicate-invoice.ndjson --now 2026-01-15T10:03:00Z
 # demo: in-process scenario -> NDJSON -> CLI
 node apps/demo/dist/scenario.js --fault duplicate-invoice --out bte-report/demo/dup.ndjson
 node apps/cli/dist/main.js evaluate -r rules -e bte-report/demo/dup.ndjson --now 2026-01-15T10:02:31Z
 BTE_DEMO_FAULTS=wrong-amount node apps/demo/dist/main.js   # live server on :3000
+BTE_DEMO_CLOCK=manual node apps/demo/dist/main.js          # controllable clock: POST /admin/clock/advance {ms}
 ```
 
 ## Demo app rules (apps/demo)
@@ -68,7 +72,20 @@ BTE_DEMO_FAULTS=wrong-amount node apps/demo/dist/main.js   # live server on :300
 - No `any`, no non-null assertions, no unsafe casts. Validate every external input with Zod.
 - Deterministic everything: sort before output, never read `Date.now()` outside `SystemClock`.
 - Tests live in `<package>/test/*.test.ts`; fixture expectations in `examples/fixtures/cases.json`.
-- Playwright (Milestone C): accessible locators, web-first assertions, no hard-coded sleeps, POM only where it helps.
+- Playwright: accessible locators (`getByRole` / `getByLabel` / `getByTestId`), web-first assertions,
+  no `waitForTimeout`; polling only through `expect.poll` inside `BteVerifier.settle`.
+  Page objects (`tests/e2e/pages`) wrap pages only; business checks go through `DemoApi` and `bte`.
+
+## E2E rules (tests/e2e)
+
+- Each worker owns an in-process demo server on a free port with a `ManualClock`; tests never share
+  fault state. `api` fixture resets faults before and after every test.
+- Deadlines are reached by `api.advanceClock(ms)`, never by waiting. The verifier evaluates at the
+  demo's clock (`/admin/clock`), so rule windows stay real (120s).
+- `bte.expectInvariant(ruleId, orderId)` must PASS; `bte.expectVerdict(..., 'FAIL' | 'UNKNOWN')` for
+  seeded faults; `bte.evaluate` for a single non-polling look (e.g. asserting PENDING).
+- `specs/demonstration.spec.ts` is `@demonstration`-tagged and excluded from the gate because its
+  second test fails on purpose. Never "fix" it to pass.
 
 ## Verification rules
 

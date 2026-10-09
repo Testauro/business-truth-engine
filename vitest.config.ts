@@ -9,6 +9,7 @@ export default defineConfig({
       '@bte/core': `${root}packages/core/src/index.ts`,
       '@bte/rules': `${root}packages/rules/src/index.ts`,
       '@bte/evidence': `${root}packages/evidence/src/index.ts`,
+      '@bte/playwright': `${root}packages/playwright/src/index.ts`,
     },
   },
   test: {

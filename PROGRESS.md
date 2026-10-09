@@ -72,14 +72,61 @@ Defect found and fixed during this milestone:
 
 Not yet verified / known gaps:
 
-- The live server was smoke-tested manually with curl; no automated test starts a real listener yet
-  (Milestone C's Playwright `webServer` will).
+- ~~No automated test starts a real listener yet~~ (Milestone C starts a real listener per worker).
 - Demo state is in-memory and resets on restart; there is no persistence or multi-process story.
 - `delayed-invoice` uses a fixed 150s delay; the live server needs real wall time to show it.
 
-## Milestone C — Playwright demonstration: NOT STARTED
+## Milestone C — Playwright demonstration: COMPLETE (2026-10-09)
+
+| Check                             | Command                                                      | Result                                                                                                                                                                                                                                                                               |
+| --------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Typecheck (incl. tests/e2e)       | `npx --yes pnpm@10 typecheck`                                | OK, 0 errors                                                                                                                                                                                                                                                                         |
+| Lint                              | `npx --yes pnpm@10 lint`                                     | OK, 0 problems                                                                                                                                                                                                                                                                       |
+| Unit / integration tests          | `npx --yes pnpm@10 test`                                     | 15 files, 152 tests passed                                                                                                                                                                                                                                                           |
+| Formatting                        | `npx --yes pnpm@10 format:check`                             | OK                                                                                                                                                                                                                                                                                   |
+| Playwright gated suite (chromium) | `npx --yes pnpm@10 test:e2e`                                 | 16 passed in ~3s on 5 workers (4 UI, 4 API, 8 business-truth)                                                                                                                                                                                                                        |
+| Demonstration pair                | `npx --yes pnpm@10 test:e2e:demonstration`                   | test 1 (UI) passed; test 2 (BTE) failed by design: `VerdictError: expected BTE verdict PASS but got FAIL ... MISSING_EXPECTED_OUTCOME [evidence: source:invoicing@..., order.paid:ord_0002:pay_0002]`; trace.zip, screenshot, verdict JSON, explanation and evidence NDJSON attached |
+| Reports                           | `bte-report/e2e-html/index.html`, `bte-report/e2e-junit.xml` | generated                                                                                                                                                                                                                                                                            |
+
+Delivered:
+
+- `packages/playwright`: `BteVerifier` with `evaluate` (single look), `settle` (polls via `expect.poll`,
+  refreshing evidence each time; PENDING past the budget is an explicit failure quoting the last
+  verdict), `expectVerdict`, `expectInvariant`; `explainVerdict`; `httpEvidenceSource`; attachments.
+- `apps/demo`: `BTE_DEMO_CLOCK=manual`, `GET /admin/clock`, `POST /admin/clock/advance` (ticks
+  delayed invoices), `manualClock` option on `buildDemo`.
+- `tests/e2e`: `fixtures/demo-server.ts` (real listener per worker on port 0, or `BTE_E2E_BASE_URL`),
+  `fixtures/test.ts` (`api`, `checkout`, `bte`, worker-scoped `rules` and `demoServer`, `baseURL`
+  override), `pages/checkout.page.ts`, `pages/order.page.ts`, `api/demo-api.ts` (Zod-validated
+  client), `data/test-data.ts`, specs `checkout`, `api`, `business-truth`, `demonstration`.
+- Business-truth matrix in E2E: happy path (PENDING -> PASS), missing invoice (FAIL), duplicate
+  invoice (FAIL citing both events), incorrect amount (FAIL 24.99 vs 50.97), unknown evidence
+  (UNKNOWN -> recovers to PASS), delayed invoice (PENDING -> late FAIL), duplicate delivery (PASS),
+  and "settle never upgrades PENDING".
+- Every business-truth test also verifies order, payment and invoice state through the API,
+  independently of the page.
+
+Defects found and fixed during this milestone:
+
+- `BteVerifier.settle` built its `expect.poll` message eagerly, so a PENDING timeout did not quote
+  the last verdict (test "settle never upgrades PENDING" caught it). The error is now composed after
+  polling, attaches the last verdict, and keeps the original error as `cause`.
+- Two `exactOptionalPropertyTypes` violations in `playwright.config.ts` (conditional spreads now).
+
+Environment notes:
+
+- Playwright 1.64 needed chromium headless shell build 1248; it was downloaded into Playwright's
+  user cache (`~/Library/Caches/ms-playwright`), outside the repository, like the npm cache.
+
+Not yet verified / known gaps:
+
+- CI has not run (nothing pushed). The workflow installs chromium and runs the gated suite plus the
+  demonstration pair, asserting the pair exits non-zero.
+- Only chromium is configured; firefox/webkit projects are a one-line addition.
+- The E2E suite drives the in-process demo; `BTE_E2E_BASE_URL` against an external server is
+  supported but was not exercised in this session.
 
 ## Milestone D — Reports, CI gating, OSS hygiene: PARTIAL
 
-- Done in A/B: JSON report, exit-code gating, CI workflow file (now also runs demo scenarios), Apache-2.0 license.
+- Done in A/B/C: JSON report, exit-code gating, CI workflow (demo scenarios + Playwright), JUnit for unit and E2E, Apache-2.0 license.
 - Remaining: JUnit output for verdicts, CONTRIBUTING / SECURITY / CODE_OF_CONDUCT, templates.

@@ -22,7 +22,12 @@ export default tseslint.config(
     languageOptions: {
       globals: { ...globals.node },
       parserOptions: {
-        project: ['./tsconfig.test.json', './packages/*/tsconfig.json', './apps/*/tsconfig.json'],
+        project: [
+          './tsconfig.test.json',
+          './packages/*/tsconfig.json',
+          './apps/*/tsconfig.json',
+          './tests/e2e/tsconfig.json',
+        ],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -39,6 +44,14 @@ export default tseslint.config(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/dot-notation': ['error', { allowIndexSignaturePropertyAccess: true }],
       'no-console': ['error', { allow: ['warn', 'error'] }],
+    },
+  },
+  {
+    files: ['tests/e2e/**/*.ts'],
+    rules: {
+      // Playwright fixtures use `({}, use)` destructuring and `rejects` assertions by design.
+      '@typescript-eslint/no-empty-pattern': 'off',
+      'no-empty-pattern': 'off',
     },
   },
   {

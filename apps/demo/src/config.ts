@@ -10,6 +10,8 @@ export const EnvSchema = z.object({
     .default('false')
     .transform((value) => value === 'true' || value === '1'),
   BTE_DEMO_TICK_MS: z.coerce.number().int().min(100).default(1000),
+  BTE_DEMO_CLOCK: z.enum(['system', 'manual']).default('system'),
+  BTE_DEMO_CLOCK_START: z.string().optional(),
 });
 
 export interface DemoConfig {
@@ -18,6 +20,8 @@ export interface DemoConfig {
   faults: ReturnType<typeof parseFaultList>;
   log: boolean;
   tickMs: number;
+  clock: 'system' | 'manual';
+  clockStart: string | undefined;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): DemoConfig {
@@ -28,5 +32,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): DemoConfig {
     faults: parseFaultList(parsed.BTE_DEMO_FAULTS),
     log: parsed.BTE_DEMO_LOG,
     tickMs: parsed.BTE_DEMO_TICK_MS,
+    clock: parsed.BTE_DEMO_CLOCK,
+    clockStart: parsed.BTE_DEMO_CLOCK_START,
   };
 }
