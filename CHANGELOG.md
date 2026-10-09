@@ -3,9 +3,12 @@
 All notable changes to this project are documented here. The format follows Keep a Changelog;
 versions follow SemVer. Unreleased changes sit at the top.
 
-## [Unreleased]
+## [0.1.0] - 2026-10-09
 
-### Fixed (independent SDET review, 2026-10-09)
+First release: the deterministic engine, CLI, demo and Playwright integration. CI green on Node
+24 and 26 (https://github.com/Testauro/business-truth-engine/actions).
+
+### Fixed (independent SDET review before release)
 
 - Attestation selection could depend on evidence order when two attestations for one source shared
   an `observedAt`; selection is now total and conservative.
@@ -14,15 +17,11 @@ versions follow SemVer. Unreleased changes sit at the top.
 - Two CLI tests claimed to cover the no-trigger path but did not; a `no-trigger` fixture now does.
 - Playwright CI retries disabled: the suite is deterministic and a flake must fail loudly.
 
-### Added
+### Added (review)
 
 - `trigger.source` in rules: trigger events from other sources are ignored and an untrusted trigger
   source forces UNKNOWN; `RuleVerdict.triggerSource` reports the assessment. The reference rule
   declares `source: orders`. New fixtures `untrusted-trigger-source` and `no-trigger`.
-
-## [0.1.0] - 2026-10-09
-
-First release candidate: the deterministic engine, CLI, demo and Playwright integration.
 
 ### Added
 
