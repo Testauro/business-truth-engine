@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 10.34.6
@@ -67,7 +67,7 @@ jobs:
     env:
       BTE_TEST_POSTGRES_URL: postgres://bte:bte@127.0.0.1:5432/bte
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 10.34.6
@@ -114,7 +114,7 @@ jobs:
     timeout-minutes: 20
     needs: [quality]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 10.34.6
@@ -148,7 +148,7 @@ jobs:
     timeout-minutes: 15
     needs: [quality]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 10.34.6
@@ -193,7 +193,7 @@ jobs:
       ORANGEHRM_USERNAME: ${{ secrets.ORANGEHRM_USERNAME }}
       ORANGEHRM_PASSWORD: ${{ secrets.ORANGEHRM_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 10.34.6
