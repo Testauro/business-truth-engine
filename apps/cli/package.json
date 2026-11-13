@@ -28,9 +28,9 @@
     "@bte/evidence-postgres": "workspace:*",
     "@bte/rules": "workspace:*",
     "@bte/sdk": "workspace:*",
-    "commander": "^15.0.0"
+    "commander": "^15.1.0"
   },
   "devDependencies": {
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   }
 }
