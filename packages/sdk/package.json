@@ -27,7 +27,7 @@
     "@bte/evidence": "workspace:*",
     "@bte/evidence-http": "workspace:*",
     "@bte/rules": "workspace:*",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "@bte/evidence-postgres": "workspace:*"
